@@ -1,6 +1,6 @@
 # Integration Architecture
 
-> World Monitor — Multi-Runtime Monolith Integration Guide
+> World Monitor v2.5.8 — Multi-Runtime Monolith Integration Guide
 
 This document describes how the 8 major parts of the World Monitor system communicate. It covers every integration path from browser to external API, including desktop offline operation, WebSocket streaming, worker threads, and proto-generated communication layers.
 
@@ -18,6 +18,8 @@ This document describes how the 8 major parts of the World Monitor system commun
 - [H. Data Flow Patterns](#h-data-flow-patterns)
 - [I. Offline / Fallback Strategy](#i-offline--fallback-strategy)
 - [J. Cross-Part Dependencies](#j-cross-part-dependencies)
+- [K. Security Hardening](#k-security-hardening)
+- [L. New in v2.5.8](#l-new-in-v258)
 
 ---
 
@@ -47,11 +49,13 @@ Additionally, **Convex** (`convex/registerInterest.ts`) provides a serverless da
 │  ┌──────────────┐   postMessage   ┌───────────────────────────┐    │
 │  │  ML Worker    │◄──────────────►│                           │    │
 │  │  (ONNX)      │                 │    Frontend SPA (1)       │    │
-│  └──────────────┘                 │    src/App.ts             │    │
-│  ┌──────────────┐   postMessage   │    src/services/*         │    │
-│  │  Analysis     │◄──────────────►│    src/components/*       │    │
-│  │  Worker       │                │                           │    │
-│  └──────────────┘                 └────────┬──────────────────┘    │
+│  └──────────────┘                 │    src/App.ts (499 LOC    │    │
+│  ┌──────────────┐   postMessage   │      shell) + src/app/    │    │
+│  │  Analysis     │◄──────────────►│      (8 modules, 4,995   │    │
+│  │  Worker       │                │      LOC)                 │    │
+│  └──────────────┘                 │    src/services/*         │    │
+│                                   │    src/components/* (62)  │    │
+│                                   └────────┬──────────────────┘    │
 │                                            │                        │
 │               ┌────────────────────────────┼────────────────────┐  │
 │               │ fetch() — patched in       │ desktop, native     │  │
@@ -79,18 +83,20 @@ Additionally, **Convex** (`convex/registerInterest.ts`) provides a serverless da
     └──────────┬───────────┘     └──────────┬─────────────┘         │
                │                            │                       │
                ▼                            ▼                       │
-    ┌────────────────────────────────────────────┐                  │
-    │          EXTERNAL APIs                      │                  │
-    │  USGS · FIRMS · FRED · EIA · ACLED · GDELT │                  │
-    │  Finnhub · Cloudflare · PolyMarket · UNHCR │                  │
-    │  AbuseIPDB · OTX · URLhaus · UCDP · Groq   │                  │
-    └────────────────────────────────────────────┘                  │
+    ┌────────────────────────────────────────────────────────┐      │
+    │          EXTERNAL APIs                                  │      │
+    │  USGS · FIRMS · FRED · EIA · ACLED · GDELT · WTO · BIS │      │
+    │  Finnhub · Cloudflare · PolyMarket · UNHCR · YouTube   │      │
+    │  AbuseIPDB · OTX · URLhaus · UCDP · Groq · CAF/GHI    │      │
+    └────────────────────────────────────────────────────────┘      │
                                                                      │
     ┌──────────────────────┐          ┌──────────────────────┐      │
     │  AIS Relay (7)       │◄─── WS ──┤  AISStream.io        │      │
     │  Railway             │          └──────────────────────┘      │
     │  HTTP snapshot API   │◄── fetch ─────────────────────────────┘
-    │  WS fanout to few    │
+    │  WS fanout (max 10)  │
+    │  Spatial chokepoint   │
+    │  index + backpressure │
     └──────────────────────┘
 
     ┌──────────────────────┐
@@ -147,7 +153,7 @@ Browser fetch("/api/seismology/v1/list-earthquakes", { method: "POST", body: JSO
 ┌─ Handler (server/worldmonitor/{domain}/v1/handler.ts) ──────────┐
 │  • Receives typed request (deserialized from JSON by generated   │
 │    server stub)                                                   │
-│  • Calls external APIs (USGS, FRED, EIA, etc.)                  │
+│  • Calls external APIs (USGS, FRED, EIA, WTO, BIS, etc.)        │
 │  • Maps upstream errors via error-mapper.ts:                     │
 │    - ApiError (with statusCode) → proxied status code            │
 │    - Network TypeError → 502 Bad Gateway                         │
@@ -158,7 +164,7 @@ Browser fetch("/api/seismology/v1/list-earthquakes", { method: "POST", body: JSO
 
 ### B.2 Registered Service Domains
 
-The gateway registers routes for **17 service domains**:
+The gateway registers routes for **20 service domains** (57 RPCs):
 
 | Domain | Example RPC | External Source |
 |--------|------------|-----------------|
@@ -179,6 +185,9 @@ The gateway registers routes for **17 service domains**:
 | news | — | RSS / GDELT |
 | intelligence | — | Multi-source aggregation |
 | military | — | OpenSky / AIS / Wingbits |
+| **trade** | get-trade-restrictions | **WTO** |
+| **giving** | get-giving-summary | **CAF / GHI** |
+| **positive-events** | list-positive-geo-events | **Multi-source positive news** |
 
 ### B.3 CORS Policy
 
@@ -312,11 +321,13 @@ The relay server is **not a simple proxy** — it maintains significant server-s
 | **Vessel tracking** | In-memory `vessels` Map keyed by MMSI, 30-min window |
 | **Density grid** | 2°×2° grid cells tracking vessel counts and intensity |
 | **Chokepoint monitoring** | 8 predefined maritime chokepoints (Hormuz, Suez, Malacca, Bab el-Mandeb, Panama, Taiwan Strait, South China Sea, Black Sea) |
+| **Chokepoint spatial index** | Vessels bucketed into grid cells at ingest time for O(1) chokepoint lookup |
 | **Military detection** | NAVAL_PREFIX_RE + ship type (35/50–59) → `candidateReports` |
 | **Dark ship detection** | AIS gap analysis (gaps > 1 hour) → disruption alerts |
 | **Snapshot API** | Pre-computed JSON snapshot at configurable intervals (default 5s) |
 | **UCDP caching** | 6-hour TTL cache for UCDP GED conflict events (avoids upstream rate limits) |
 | **Gzip compression** | Response compression for HTTP snapshot API (~80% reduction) |
+| **Per-client backpressure** | Skips WebSocket sends when client buffer is backed up |
 
 ### D.3 Communication Pattern
 
@@ -579,18 +590,61 @@ Service Layer (src/services/earthquakes.ts)
     │
     │ transforms → domain model
     ▼
-App.ts (orchestrator)
+App Module (src/app/data-loader.ts — orchestrator)
     │
     │ state update + render trigger
     ▼
 Component (src/components/*.ts)
     │
-    │ DOM manipulation
+    │ DOM manipulation via escapeHtml()
     ▼
 Browser DOM
 ```
 
-### H.2 Legacy/Direct Fetch Flow (Non-proto routes)
+### H.2 Trade Policy Intelligence Flow (New in v2.5.8)
+
+```
+WTO APIs
+    │
+    │ fetch() with circuit breakers (30-min cache TTL, persistCache)
+    ▼
+Handler (server/worldmonitor/trade/v1/handler.ts)
+    │
+    │ 4 RPCs: getTradeRestrictions, getTariffTrends,
+    │         getTradeFlows, getTradeBarriers
+    ▼
+src/services/trade/index.ts
+    │
+    │ Circuit breaker wrapped (WTO Restrictions, WTO Tariffs,
+    │ WTO Flows, WTO Barriers — each with persistCache)
+    │ + feature gate: isFeatureAvailable('wtoTrade')
+    ▼
+TradePolicyPanel (src/components/TradePolicyPanel.ts)
+    ▼
+Browser DOM
+```
+
+### H.3 Happy Monitor / Positive Events Flow (New in v2.5.8)
+
+```
+Multiple positive-news sources (CAF, GHI, species databases, renewables)
+    │
+    ▼
+server/worldmonitor/giving/v1/handler.ts (getGivingSummary)
+server/worldmonitor/positive-events/v1/handler.ts (listPositiveGeoEvents)
+    │
+    ▼
+src/services/giving/ + src/services/positive-events/
+    │
+    ▼
+HappyMonitor panels: GivingPanel, GoodThingsDigestPanel,
+  HeroSpotlightPanel, PositiveNewsFeedPanel, ProgressChartsPanel,
+  RenewableEnergyPanel, SpeciesComebackPanel, CountersPanel
+    ▼
+Browser DOM (happy.worldmonitor.app)
+```
+
+### H.4 Legacy/Direct Fetch Flow (Non-proto routes)
 
 Some older endpoints (`api/rss-proxy.js`, `api/youtube/live.js`, etc.) use direct fetch without the proto layer:
 
@@ -606,7 +660,7 @@ Vercel Function (api/rss-proxy.js)
 Response → Service → App → Component → DOM
 ```
 
-### H.3 Desktop fetch() Interception
+### H.5 Desktop fetch() Interception
 
 ```
 Service calls fetch("/api/seismology/v1/list-earthquakes")
@@ -636,7 +690,29 @@ installRuntimeFetchPatch() intercepts
 Response returned to calling service
 ```
 
-### H.4 Tauri IPC Bridge
+### H.6 Command Palette Flow (New in v2.5.8)
+
+```
+User presses Ctrl/Cmd+K
+    │
+    ▼
+CommandPalettePanel (src/components/CommandPalettePanel.ts)
+    │
+    │ reads COMMANDS from src/config/commands.ts
+    │ Fuzzy search over command.keywords
+    │
+    │ Command categories:
+    │ • navigate — region switching (global, mena, eu, asia, etc.)
+    │ • layers — toggle layer presets (military, finance, infra, intel)
+    │ • panels — toggle specific panels
+    │ • view — view mode switches
+    │ • actions — app actions
+    │ • country — jump to curated country
+    ▼
+App dispatches action via custom event
+```
+
+### H.7 Tauri IPC Bridge
 
 Frontend services communicate with Rust via the Tauri bridge (`src/services/tauri-bridge.ts`):
 
@@ -691,7 +767,9 @@ Configured in `vite.config.ts` via `vite-plugin-pwa`:
 `src/utils/circuit-breaker.ts` provides per-service error isolation:
 
 - **States**: Closed → Open → Half-Open → Closed
-- **Configurable**: failure threshold, cooldown period, per-breaker naming
+- **Configurable**: failure threshold, cooldown period, per-breaker naming, cache TTL
+- **Persistent cache (v2.5.8)**: `persistCache: true` option hydrates cached responses from IndexedDB across page reloads (24-hour stale ceiling)
+- **Desktop offline mode**: Auto-detects `navigator.onLine === false` + Tauri runtime → serves stale cache without tripping breaker
 - **Global registry**: `getCircuitBreakerStatus()` reports all breaker states
 - **Used by**: Each external data service wraps fetch calls with circuit breakers
 
@@ -815,4 +893,58 @@ From `vercel.json`:
 
 ---
 
-*Last updated: 2026-02-23*
+## K. Security Hardening
+
+### K.1 Output Sanitization
+
+`src/utils/sanitize.ts` provides shared sanitization utilities used throughout the app:
+
+| Function | Purpose |
+|----------|---------|
+| `escapeHtml(str)` | Escapes `& < > " '` → HTML entity equivalents |
+| `sanitizeUrl(url)` | Validates URL protocol (http/https only), rejects javascript: etc. |
+| `escapeAttr(str)` | Alias for `escapeHtml` — attribute context escaping |
+
+**Used by**: All components rendering user/external data, settings window, live-channels window, desktop updater (update notes rendering).
+
+### K.2 Desktop IPC Security
+
+- **Capability model**: Tauri 2.x capabilities in `src-tauri/capabilities/` restrict which windows can invoke which IPC commands
+- **Window scoping**: `default.json` limits `core:default` permissions to `main`, `settings`, and `live-channels` windows
+- **YouTube OAuth**: Separate `youtube-login.json` capability for OAuth flow window
+- **Bearer token auth**: Sidecar requests require a runtime-generated bearer token — prevents localhost port abuse
+
+### K.3 CORS & Origin Validation
+
+- Server-side CORS in `server/cors.ts` with production origin allowlist
+- Edge gateway performs `isDisallowedOrigin()` check before processing
+- API key validation layer (`api/_api-key.js`) for desktop-to-cloud path
+
+### K.4 External API Security
+
+- **Cyber domain**: `server/worldmonitor/cyber/v1/_shared.ts` includes URL validation for external threat intelligence APIs
+- **RSS proxy**: URL validation before proxying to prevent SSRF-like abuse
+- **IPv4 enforcement**: Sidecar patches fetch to prevent DNS rebinding via IPv6
+
+---
+
+## L. New in v2.5.8
+
+Summary of integration-relevant changes from v2.5.5 → v2.5.8:
+
+| Change | Impact |
+|--------|--------|
+| **App.ts decomposition** | 4,629 LOC monolith → 499 LOC shell + `src/app/` (8 modules, 4,995 LOC). Data loading, panel layout, event handling, search, country intel, desktop updates, and refresh scheduling are now separate `AppModule` classes. |
+| **3 new service domains** | Trade (WTO), Giving (CAF/GHI), Positive Events — adds 20th domain to the RPC layer |
+| **Happy variant** | 4th build variant (`happy`) for positive news dashboard at `happy.worldmonitor.app` (web-only, no Tauri config) |
+| **Command palette** | `src/config/commands.ts` defines navigable command registry; `CommandPalettePanel` provides Ctrl+K fuzzy search |
+| **Trade route visualization** | `src/config/trade-routes.ts` defines major trade routes and chokepoints; rendered as map overlay |
+| **Multi-window desktop** | Settings and live-channels now open as standalone Tauri windows (not panels) |
+| **Circuit breaker persistence** | `persistCache: true` option stores last-known-good responses in IndexedDB (24h stale ceiling) |
+| **AIS relay improvements** | Spatial chokepoint indexing at ingest time, per-client WebSocket backpressure |
+| **Sanitization layer** | `src/utils/sanitize.ts` centralizes HTML/URL/attribute escaping across components |
+| **Proto expansion** | ~92 → ~109 proto files, 17 → 20 service domains |
+
+---
+
+*Last updated: 2025-06-10*

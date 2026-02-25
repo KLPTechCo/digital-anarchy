@@ -1,6 +1,6 @@
 # World Monitor — Project Overview
 
-**Version**: 2.5.5 | **License**: AGPL-3.0-only | **Last Updated**: 2026-02-23
+**Version**: 2.5.8 | **License**: AGPL-3.0-only | **Last Updated**: 2026-02-26
 
 ## Executive Summary
 
@@ -13,18 +13,19 @@ World Monitor is a **real-time global intelligence dashboard** — an AI-powered
 | Full | [worldmonitor.app](https://worldmonitor.app) | Geopolitical intelligence, military, OSINT |
 | Tech | [tech.worldmonitor.app](https://tech.worldmonitor.app) | AI industry, startups, tech ecosystem |
 | Finance | [finance.worldmonitor.app](https://finance.worldmonitor.app) | Markets, trading, economic indicators |
+| Happy | [happy.worldmonitor.app](https://happy.worldmonitor.app) | Positive news, human progress, conservation |
 
 A **Tauri 2.x desktop application** packages the same SPA with a local Node.js API sidecar, OS keychain integration, and offline support for macOS, Windows, and Linux.
 
 ## Repository Type
 
-**Multi-Part Monolith** — a single codebase producing 5 distinct deployment artifacts. All parts share the same `node_modules`, `tsconfig.json`, and build pipeline. There are no independent package versions or workspace configurations.
+**Multi-Part Monolith** — a single codebase producing 6 distinct deployment artifacts (4 web variants + desktop + AIS relay). All parts share the same `node_modules`, `tsconfig.json`, and build pipeline. There are no independent package versions or workspace configurations.
 
 ## Project Parts
 
 | # | Part | Path | Type | Primary Tech |
 |---|------|------|------|-------------|
-| 1 | Frontend SPA | `src/` | Web | TypeScript, Vite 6, MapLibre GL, deck.gl, D3.js |
+| 1 | Frontend SPA | `src/`, `src/app/` | Web | TypeScript, Vite 6, MapLibre GL, deck.gl, D3.js |
 | 2 | Vercel Serverless API | `api/` | Backend | Node.js (JS + TS), Vercel Functions + Edge |
 | 3 | Proto-First API (sebuf) | `proto/`, `server/`, `src/generated/` | Backend | Protobuf, buf, TypeScript handlers |
 | 4 | Desktop App (Tauri) | `src-tauri/` | Desktop | Rust + Tauri 2.x |
@@ -44,7 +45,7 @@ A **Tauri 2.x desktop application** packages the same SPA with a local Node.js A
 | **ML/AI** | Transformers.js (@xenova/transformers), ONNX Runtime Web |
 | **Desktop** | Tauri 2.x (Rust + WebView) |
 | **PWA** | vite-plugin-pwa with Workbox |
-| **i18n** | i18next (16 languages, lazy-loaded) |
+| **i18n** | i18next (17 languages, lazy-loaded) |
 | **API Codegen** | buf + sebuf (custom protoc plugins) |
 | **Monitoring** | Sentry, PostHog, Vercel Analytics |
 | **Storage** | Upstash Redis, Convex, IndexedDB, localStorage, OS Keychain |
@@ -53,23 +54,25 @@ A **Tauri 2.x desktop application** packages the same SPA with a local Node.js A
 
 **Vanilla TypeScript SPA** with proto-first RPC API layer. No frontend framework (React/Vue/Angular) — hand-rolled class-based component system with service-singleton pattern, event-driven state, and Web Worker offloading for ML inference and O(n²) analysis.
 
+The `App.ts` orchestrator was decomposed in v2.5.6–2.5.8 from a single 4,629 LOC monolith into a thin 499 LOC shell that delegates to 8 specialized modules in `src/app/` (total ~5,500 LOC): `DataLoaderManager`, `PanelLayoutManager`, `EventHandlerManager`, `SearchManager`, `CountryIntelManager`, `RefreshScheduler`, `DesktopUpdater`, and `AppContext`.
+
 ## Codebase Stats
 
 | Section | Files | Lines |
 |---------|-------|-------|
-| Frontend (`src/`) | ~180 | ~67,338 |
-| Server handlers (`server/`) | ~40 | ~9,433 |
-| Proto definitions (`proto/`) | ~90 | ~3,977 |
-| API functions (`api/`) | ~20 | ~1,865 |
-| Desktop (`src-tauri/`) | ~5 | ~2,100 |
-| Scripts | ~5 | ~1,700 |
-| Tests + E2E | ~12 | ~2,500 |
-| Generated code (`src/generated/`) | ~50 | ~5,000+ |
-| **Total (hand-written)** | **~350+** | **~90,400** |
+| Frontend (`src/`) | ~236 | ~76,270 |
+| Server handlers (`server/`) | ~94 | ~11,181 |
+| Proto definitions (`proto/`) | ~109 | ~4,504 |
+| API functions (`api/`) | ~22 | ~2,585 |
+| Desktop (`src-tauri/`) | ~5 | ~1,173 |
+| Scripts | ~9 | ~1,700 |
+| Tests + E2E | ~16 | ~3,500+ |
+| Generated code (`src/generated/`) | ~60 | ~8,000+ |
+| **Total (hand-written)** | **~493** | **~107,187** |
 
-## Service Domains (17)
+## Service Domains (20)
 
-The API layer covers 17 intelligence domains, each with proto definitions, generated clients/servers, and handler implementations:
+The API layer covers 20 intelligence domains, each with proto definitions, generated clients/servers, and handler implementations (57 total RPC endpoints):
 
 | Domain | Key Capabilities |
 |--------|-----------------|
@@ -84,24 +87,27 @@ The API layer covers 17 intelligence domains, each with proto definitions, gener
 | Conflict | ACLED/UCDP armed conflict events, humanitarian data |
 | Maritime | AIS vessel tracking, NGA navigation warnings |
 | Cyber | Threat intelligence, abuse.ch feeds |
-| Economic | FRED, EIA energy, World Bank indicators, sanctions |
-| Infrastructure | Internet outages, submarine cables, service status |
+| Economic | FRED, EIA energy, World Bank, BIS central bank rates/credit/FX, sanctions |
+| Infrastructure | Internet outages, submarine cables, service status, temporal baselines |
 | Market | Stocks, crypto, commodities, ETF flows, stablecoins |
 | News | AI article summarization (Groq/OpenRouter) |
 | Intelligence | Event classification, risk scoring, GDELT, PizzINT |
 | Military | Flight tracking, fleet reports, theater posture |
+| **Trade** | WTO tariffs, trade restrictions, flows, barriers (new in v2.5.8) |
+| **Giving** | Humanitarian giving data, charity metrics (HappyMonitor) |
+| **Positive Events** | Positive geo-located news events (HappyMonitor) |
 
 ## External API Integrations (35+)
 
 20+ keyed APIs (all optional, graceful degradation): Groq, OpenRouter, Finnhub, EIA, FRED, Wingbits, ACLED, Cloudflare Radar, NASA FIRMS, AISStream, OpenSky, Upstash Redis, Sentry, PostHog, Convex.
 
-15+ free/no-key APIs: USGS, UCDP, UNHCR, Open-Meteo, GDELT, Polymarket, Yahoo Finance, NGA, FAA, PizzINT, CoinGecko, abuse.ch, plus 30+ RSS news feeds.
+15+ free/no-key APIs: USGS, UCDP, UNHCR, Open-Meteo, GDELT, Polymarket, Yahoo Finance, NGA, FAA, PizzINT, CoinGecko, abuse.ch, **WTO**, **BIS**, plus 30+ RSS news feeds.
 
 ## Deployment Architecture
 
 | Target | Platform | Trigger |
 |--------|----------|---------|
-| Web (3 variants) | Vercel (auto-deploy) | Git push to main |
+| Web (4 variants) | Vercel (auto-deploy) | Git push to main |
 | Desktop (3 variants × 4 platforms) | GitHub Releases | Tag `v*` push |
 | AIS Relay | Railway | Manual/CI |
 | Convex Functions | Convex Cloud | `npx convex deploy` |
@@ -114,4 +120,5 @@ make install         # buf CLI + sebuf plugins + Playwright browsers
 npm run dev          # Start full variant dev server
 npm run dev:tech     # Start tech variant
 npm run dev:finance  # Start finance variant
+npm run dev:happy    # Start happy variant
 ```
