@@ -13,6 +13,9 @@ api/\[\[...path\]\].js
 .cursor/
 CLAUDE.md
 .env.vercel-backup
+_bmad/
+.github/agents/bmad-*.agent.md
+.github/prompts/bmad*.prompt.md
 .env.vercel-export
 .agent/
 .factory/
