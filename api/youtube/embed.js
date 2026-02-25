@@ -19,17 +19,31 @@ const ALLOWED_ORIGINS = [
   /^tauri:\/\/localhost$/,
 ];
 
-function sanitizeOrigin(raw) {
-  if (!raw) return 'https://worldmonitor.app';
+const ALLOWED_PARENT_ORIGINS = [
+  ...ALLOWED_ORIGINS,
+  /^https?:\/\/tauri\.localhost$/,
+  /^https?:\/\/[a-z0-9-]+\.tauri\.localhost$/,
+];
+
+function sanitizeAllowedOrigin(raw, fallback, allowList = ALLOWED_ORIGINS) {
+  if (!raw) return fallback;
   try {
     const parsed = new URL(raw);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:' && parsed.protocol !== 'tauri:') {
-      return 'https://worldmonitor.app';
+    if (!['https:', 'http:', 'tauri:'].includes(parsed.protocol)) {
+      return fallback;
     }
     const origin = parsed.origin !== 'null' ? parsed.origin : raw;
-    if (ALLOWED_ORIGINS.some(p => p.test(origin))) return origin;
+    if (allowList.some(p => p.test(origin))) return origin;
   } catch { /* invalid URL */ }
-  return 'https://worldmonitor.app';
+  return fallback;
+}
+
+function sanitizeOrigin(raw) {
+  return sanitizeAllowedOrigin(raw, 'https://worldmonitor.app', ALLOWED_ORIGINS);
+}
+
+function sanitizeParentOrigin(raw, fallback) {
+  return sanitizeAllowedOrigin(raw, fallback, ALLOWED_PARENT_ORIGINS);
 }
 
 export default async function handler(request) {
@@ -47,8 +61,9 @@ export default async function handler(request) {
   const mute = parseFlag(url.searchParams.get('mute'), '1');
 
   const origin = sanitizeOrigin(url.searchParams.get('origin'));
+  const parentOrigin = sanitizeParentOrigin(url.searchParams.get('parentOrigin'), origin);
 
-  const embedSrc = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
+  const embedSrc = new URL(`https://www.youtube.com/embed/${videoId}`);
   embedSrc.searchParams.set('autoplay', autoplay);
   embedSrc.searchParams.set('mute', mute);
   embedSrc.searchParams.set('playsinline', '1');
@@ -79,21 +94,38 @@ export default async function handler(request) {
     var tag=document.createElement('script');
     tag.src='https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
-    var player,overlay=document.getElementById('play-overlay'),started=false;
+    var player,overlay=document.getElementById('play-overlay'),started=false,muteSyncIntervalId,parentOrigin=${JSON.stringify(parentOrigin)},allowedOrigin=${JSON.stringify(parentOrigin)};
     function hideOverlay(){overlay.classList.add('hidden')}
+    function readMuted(){
+      if(!player)return null;
+      if(typeof player.isMuted==='function')return player.isMuted();
+      if(typeof player.getVolume==='function')return player.getVolume()===0;
+      return null;
+    }
+    function stopMuteSync(){if(muteSyncIntervalId){clearInterval(muteSyncIntervalId);muteSyncIntervalId=null}}
+    function startMuteSync(){
+      if(muteSyncIntervalId)return;
+      var lastMuted=readMuted();
+      if(lastMuted!==null)window.parent.postMessage({type:'yt-mute-state',muted:lastMuted},parentOrigin);
+      muteSyncIntervalId=setInterval(function(){
+        var m=readMuted();
+        if(m!==null&&m!==lastMuted){lastMuted=m;window.parent.postMessage({type:'yt-mute-state',muted:m},parentOrigin)}
+      },500);
+    }
     function onYouTubeIframeAPIReady(){
       player=new YT.Player('player',{
         videoId:'${videoId}',
-        host:'https://www.youtube-nocookie.com',
+        host:'https://www.youtube.com',
         playerVars:{autoplay:${autoplay},mute:${mute},playsinline:1,rel:0,controls:1,modestbranding:1,enablejsapi:1,origin:${JSON.stringify(origin)},widget_referrer:${JSON.stringify(origin)}},
         events:{
           onReady:function(){
-            window.parent.postMessage({type:'yt-ready'},'*');
+            window.parent.postMessage({type:'yt-ready'},parentOrigin);
             if(${autoplay}===1){player.playVideo()}
+            startMuteSync();
           },
-          onError:function(e){window.parent.postMessage({type:'yt-error',code:e.data},'*')},
+          onError:function(e){stopMuteSync();window.parent.postMessage({type:'yt-error',code:e.data},parentOrigin)},
           onStateChange:function(e){
-            window.parent.postMessage({type:'yt-state',state:e.data},'*');
+            window.parent.postMessage({type:'yt-state',state:e.data},parentOrigin);
             if(e.data===1||e.data===3){hideOverlay();started=true}
           }
         }
@@ -104,6 +136,7 @@ export default async function handler(request) {
     });
     setTimeout(function(){if(!started)overlay.classList.remove('hidden')},3000);
     window.addEventListener('message',function(e){
+      if(allowedOrigin!=='*'&&e.origin!==allowedOrigin)return;
       if(!player||!player.getPlayerState)return;
       var m=e.data;if(!m||!m.type)return;
       switch(m.type){

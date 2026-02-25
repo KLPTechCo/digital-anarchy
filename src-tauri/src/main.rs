@@ -16,7 +16,7 @@ use reqwest::Url;
 use serde::Serialize;
 use serde_json::{Map, Value};
 use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, RunEvent, Webview, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 const LOCAL_API_PORT: &str = "46123";
 const KEYRING_SERVICE: &str = "world-monitor";
@@ -24,8 +24,10 @@ const LOCAL_API_LOG_FILE: &str = "local-api.log";
 const DESKTOP_LOG_FILE: &str = "desktop.log";
 const MENU_FILE_SETTINGS_ID: &str = "file.settings";
 const MENU_HELP_GITHUB_ID: &str = "help.github";
+#[cfg(feature = "devtools")]
 const MENU_HELP_DEVTOOLS_ID: &str = "help.devtools";
-const SUPPORTED_SECRET_KEYS: [&str; 21] = [
+const TRUSTED_WINDOWS: [&str; 3] = ["main", "settings", "live-channels"];
+const SUPPORTED_SECRET_KEYS: [&str; 22] = [
     "GROQ_API_KEY",
     "OPENROUTER_API_KEY",
     "FRED_API_KEY",
@@ -47,6 +49,7 @@ const SUPPORTED_SECRET_KEYS: [&str; 21] = [
     "OLLAMA_API_URL",
     "OLLAMA_MODEL",
     "WORLDMONITOR_API_KEY",
+    "WTO_API_KEY",
 ];
 
 #[derive(Default)]
@@ -190,24 +193,22 @@ fn save_vault(cache: &HashMap<String, String>) -> Result<(), String> {
 }
 
 fn generate_local_token() -> String {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-    let state = RandomState::new();
-    let mut h1 = state.build_hasher();
-    h1.write_u64(std::process::id() as u64);
-    let a = h1.finish();
-    let mut h2 = state.build_hasher();
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    h2.write_u128(nanos);
-    let b = h2.finish();
-    format!("{a:016x}{b:016x}")
+    let mut buf = [0u8; 32];
+    getrandom::getrandom(&mut buf).expect("OS CSPRNG unavailable");
+    buf.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn require_trusted_window(label: &str) -> Result<(), String> {
+    if TRUSTED_WINDOWS.contains(&label) {
+        Ok(())
+    } else {
+        Err(format!("Command not allowed from window '{label}'"))
+    }
 }
 
 #[tauri::command]
-fn get_local_api_token(state: tauri::State<'_, LocalApiState>) -> Result<String, String> {
+fn get_local_api_token(webview: Webview, state: tauri::State<'_, LocalApiState>) -> Result<String, String> {
+    require_trusted_window(webview.label())?;
     let token = state
         .token
         .lock()
@@ -235,9 +236,11 @@ fn list_supported_secret_keys() -> Vec<String> {
 
 #[tauri::command]
 fn get_secret(
+    webview: Webview,
     key: String,
     cache: tauri::State<'_, SecretsCache>,
 ) -> Result<Option<String>, String> {
+    require_trusted_window(webview.label())?;
     if !SUPPORTED_SECRET_KEYS.contains(&key.as_str()) {
         return Err(format!("Unsupported secret key: {key}"));
     }
@@ -249,20 +252,23 @@ fn get_secret(
 }
 
 #[tauri::command]
-fn get_all_secrets(cache: tauri::State<'_, SecretsCache>) -> HashMap<String, String> {
-    cache
+fn get_all_secrets(webview: Webview, cache: tauri::State<'_, SecretsCache>) -> Result<HashMap<String, String>, String> {
+    require_trusted_window(webview.label())?;
+    Ok(cache
         .secrets
         .lock()
         .unwrap_or_else(|e| e.into_inner())
-        .clone()
+        .clone())
 }
 
 #[tauri::command]
 fn set_secret(
+    webview: Webview,
     key: String,
     value: String,
     cache: tauri::State<'_, SecretsCache>,
 ) -> Result<(), String> {
+    require_trusted_window(webview.label())?;
     if !SUPPORTED_SECRET_KEYS.contains(&key.as_str()) {
         return Err(format!("Unsupported secret key: {key}"));
     }
@@ -284,7 +290,8 @@ fn set_secret(
 }
 
 #[tauri::command]
-fn delete_secret(key: String, cache: tauri::State<'_, SecretsCache>) -> Result<(), String> {
+fn delete_secret(webview: Webview, key: String, cache: tauri::State<'_, SecretsCache>) -> Result<(), String> {
+    require_trusted_window(webview.label())?;
     if !SUPPORTED_SECRET_KEYS.contains(&key.as_str()) {
         return Err(format!("Unsupported secret key: {key}"));
     }
@@ -310,12 +317,29 @@ fn cache_file_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn read_cache_entry(cache: tauri::State<'_, PersistentCache>, key: String) -> Result<Option<Value>, String> {
+fn read_cache_entry(webview: Webview, cache: tauri::State<'_, PersistentCache>, key: String) -> Result<Option<Value>, String> {
+    require_trusted_window(webview.label())?;
     Ok(cache.get(&key))
 }
 
 #[tauri::command]
-fn write_cache_entry(app: AppHandle, cache: tauri::State<'_, PersistentCache>, key: String, value: String) -> Result<(), String> {
+fn delete_cache_entry(webview: Webview, cache: tauri::State<'_, PersistentCache>, key: String) -> Result<(), String> {
+    require_trusted_window(webview.label())?;
+    {
+        let mut data = cache.data.lock().unwrap_or_else(|e| e.into_inner());
+        data.remove(&key);
+    }
+    {
+        let mut dirty = cache.dirty.lock().unwrap_or_else(|e| e.into_inner());
+        *dirty = true;
+    }
+    // Disk flush deferred to exit handler (cache.flush) — avoids blocking main thread
+    Ok(())
+}
+
+#[tauri::command]
+fn write_cache_entry(webview: Webview, app: AppHandle, cache: tauri::State<'_, PersistentCache>, key: String, value: String) -> Result<(), String> {
+    require_trusted_window(webview.label())?;
     let parsed_value: Value = serde_json::from_str(&value)
         .map_err(|e| format!("Invalid cache payload JSON: {e}"))?;
     let _write_guard = cache.write_lock.lock().unwrap_or_else(|e| e.into_inner());
@@ -464,10 +488,29 @@ fn close_settings_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn open_live_channels_window_command(
+    app: AppHandle,
+    base_url: Option<String>,
+) -> Result<(), String> {
+    open_live_channels_window(&app, base_url)
+}
+
+#[tauri::command]
+fn close_live_channels_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("live-channels") {
+        window
+            .close()
+            .map_err(|e| format!("Failed to close live channels window: {e}"))?;
+    }
+    Ok(())
+}
+
 /// Fetch JSON from Polymarket Gamma API using native TLS (bypasses Cloudflare JA3 blocking).
 /// Called from frontend when browser CORS and sidecar Node.js TLS both fail.
 #[tauri::command]
-async fn fetch_polymarket(path: String, params: String) -> Result<String, String> {
+async fn fetch_polymarket(webview: Webview, path: String, params: String) -> Result<String, String> {
+    require_trusted_window(webview.label())?;
     let allowed = ["events", "markets", "tags"];
     let segment = path.trim_start_matches('/');
     if !allowed.iter().any(|a| segment.starts_with(a)) {
@@ -519,6 +562,73 @@ fn open_settings_window(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+fn open_live_channels_window(app: &AppHandle, base_url: Option<String>) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("live-channels") {
+        let _ = window.show();
+        window
+            .set_focus()
+            .map_err(|e| format!("Failed to focus live channels window: {e}"))?;
+        return Ok(());
+    }
+
+    // In dev, use the same origin as the main window (e.g. http://localhost:3001) so we don't
+    // get "connection refused" when Vite runs on a different port than devUrl.
+    let url = match base_url {
+        Some(ref origin) if !origin.is_empty() => {
+            let path = origin.trim_end_matches('/');
+            let full_url = format!("{}/live-channels.html", path);
+            WebviewUrl::External(Url::parse(&full_url).map_err(|_| "Invalid base URL".to_string())?)
+        }
+        _ => WebviewUrl::App("live-channels.html".into()),
+    };
+
+    let _live_channels_window = WebviewWindowBuilder::new(app, "live-channels", url)
+    .title("Channel management - World Monitor")
+    .inner_size(680.0, 760.0)
+    .min_inner_size(520.0, 600.0)
+    .resizable(true)
+    .background_color(tauri::webview::Color(26, 28, 30, 255))
+    .build()
+    .map_err(|e| format!("Failed to create live channels window: {e}"))?;
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = _live_channels_window.remove_menu();
+
+    Ok(())
+}
+
+fn open_youtube_login_window(app: &AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("youtube-login") {
+        let _ = window.show();
+        window
+            .set_focus()
+            .map_err(|e| format!("Failed to focus YouTube login window: {e}"))?;
+        return Ok(());
+    }
+
+    let url = WebviewUrl::External(
+        Url::parse("https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/")
+            .map_err(|e| format!("Invalid URL: {e}"))?
+    );
+
+    let _yt_window = WebviewWindowBuilder::new(app, "youtube-login", url)
+        .title("Sign in to YouTube")
+        .inner_size(500.0, 700.0)
+        .resizable(true)
+        .build()
+        .map_err(|e| format!("Failed to create YouTube login window: {e}"))?;
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = _yt_window.remove_menu();
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn open_youtube_login(app: AppHandle) -> Result<(), String> {
+    open_youtube_login_window(&app)
+}
+
 fn build_app_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let settings_item = MenuItem::with_id(
         handle,
@@ -553,19 +663,31 @@ fn build_app_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         None::<&str>,
     )?;
-    let devtools_item = MenuItem::with_id(
-        handle,
-        MENU_HELP_DEVTOOLS_ID,
-        "Toggle Developer Tools",
-        true,
-        Some("CmdOrCtrl+Alt+I"),
-    )?;
     let help_separator = PredefinedMenuItem::separator(handle)?;
+
+    #[cfg(feature = "devtools")]
+    let help_menu = {
+        let devtools_item = MenuItem::with_id(
+            handle,
+            MENU_HELP_DEVTOOLS_ID,
+            "Toggle Developer Tools",
+            true,
+            Some("CmdOrCtrl+Alt+I"),
+        )?;
+        Submenu::with_items(
+            handle,
+            "Help",
+            true,
+            &[&about_item, &help_separator, &github_item, &devtools_item],
+        )?
+    };
+
+    #[cfg(not(feature = "devtools"))]
     let help_menu = Submenu::with_items(
         handle,
         "Help",
         true,
-        &[&about_item, &help_separator, &github_item, &devtools_item],
+        &[&about_item, &help_separator, &github_item],
     )?;
 
     let edit_menu = {
@@ -598,6 +720,7 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         MENU_HELP_GITHUB_ID => {
             let _ = open_in_shell("https://github.com/koala73/worldmonitor");
         }
+        #[cfg(feature = "devtools")]
         MENU_HELP_DEVTOOLS_ID => {
             if let Some(window) = app.get_webview_window("main") {
                 if window.is_devtools_open() {
@@ -871,6 +994,50 @@ fn stop_local_api(app: &AppHandle) {
     }
 }
 
+#[cfg(target_os = "linux")]
+fn resolve_appimage_gio_module_dir() -> Option<PathBuf> {
+    let appdir = env::var_os("APPDIR")?;
+    let appdir = PathBuf::from(appdir);
+
+    // Common layouts produced by AppImage/linuxdeploy on Debian and RPM families.
+    let preferred = [
+        "usr/lib/gio/modules",
+        "usr/lib64/gio/modules",
+        "usr/lib/x86_64-linux-gnu/gio/modules",
+        "usr/lib/aarch64-linux-gnu/gio/modules",
+        "usr/lib/arm-linux-gnueabihf/gio/modules",
+        "lib/gio/modules",
+        "lib64/gio/modules",
+    ];
+
+    for relative in preferred {
+        let candidate = appdir.join(relative);
+        if candidate.is_dir() {
+            return Some(candidate);
+        }
+    }
+
+    // Fallback: probe one level of arch-specific directories, e.g. usr/lib/<triplet>/gio/modules.
+    for lib_root in ["usr/lib", "usr/lib64", "lib", "lib64"] {
+        let root = appdir.join(lib_root);
+        if !root.is_dir() {
+            continue;
+        }
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("gio/modules");
+            if candidate.is_dir() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    None
+}
+
 fn main() {
     // Work around WebKitGTK rendering issues on Linux that can cause blank white
     // screens. DMA-BUF renderer failures are common with NVIDIA drivers and on
@@ -882,6 +1049,29 @@ fn main() {
         if env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
             // SAFETY: called before any threads are spawned (Tauri hasn't started yet).
             unsafe { env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
+        }
+
+        // Work around GLib version mismatch when running as an AppImage on newer
+        // distros (e.g. Ubuntu 25.10+).  The AppImage bundles GLib from the build
+        // system (currently Ubuntu 24.04, GLib 2.80).  When host GIO modules such
+        // as GVFS's libgvfsdbus.so are compiled against a newer GLib they reference
+        // symbols that do not exist in the bundled copy, producing:
+        //   "undefined symbol: g_task_set_static_name"
+        // Point GIO module scanning at the AppImage's bundled module directory
+        // instead of host directories. This keeps required modules (notably TLS)
+        // available while avoiding host GVFS modules that may depend on newer
+        // GLib symbols than the bundled runtime provides.
+        if env::var_os("APPIMAGE").is_some() && env::var_os("GIO_MODULE_DIR").is_none() {
+            if let Some(module_dir) = resolve_appimage_gio_module_dir() {
+                unsafe { env::set_var("GIO_MODULE_DIR", &module_dir) };
+            } else if env::var_os("GIO_USE_VFS").is_none() {
+                // Last-resort fallback: prefer local VFS backend if module path
+                // discovery fails, which reduces GVFS dependency surface.
+                unsafe { env::set_var("GIO_USE_VFS", "local") };
+                eprintln!(
+                    "[tauri] APPIMAGE detected but bundled gio/modules not found; using GIO_USE_VFS=local fallback"
+                );
+            }
         }
     }
 
@@ -900,11 +1090,15 @@ fn main() {
             get_desktop_runtime_info,
             read_cache_entry,
             write_cache_entry,
+            delete_cache_entry,
             open_logs_folder,
             open_sidecar_log_file,
             open_settings_window_command,
             close_settings_window,
+            open_live_channels_window_command,
+            close_live_channels_window,
             open_url,
+            open_youtube_login,
             fetch_polymarket
         ])
         .setup(|app| {
