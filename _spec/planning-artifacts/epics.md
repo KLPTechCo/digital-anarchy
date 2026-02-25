@@ -1483,3 +1483,51 @@ So that regressions are caught without manual checking.
 **Then** a notification (GitHub issue or workflow alert) is created in the fork repo (ARCH-58, Tier 2)
 
 **Tier:** 3 + 2
+
+---
+
+## Backlog: Upstream Fixes & Data Source Migrations
+
+### Story B.1: ACLED API OAuth2 Migration
+
+As an **operator**,
+I want the ACLED integration to use the current OAuth2 authentication flow,
+So that conflict, unrest, and risk score data continues flowing after the deprecated API is removed.
+
+**Context:** ACLED deprecated their static access token API. The new API requires OAuth2 with `grant_type=password` to obtain a 24-hour access token + 14-day refresh token. The upstream codebase (3 files) still uses the old `ACLED_ACCESS_TOKEN` Bearer pattern.
+
+**Acceptance Criteria:**
+
+**Given** this story is picked up for implementation
+**When** the developer checks the current upstream codebase
+**Then** they first verify whether upstream (koala73/worldmonitor) has already migrated to the new ACLED OAuth2 flow
+**And** if upstream has fixed it, this story is closed as resolved-upstream with a note on which commit/release included the fix
+
+**Given** upstream has NOT fixed the ACLED authentication
+**When** the migration is implemented
+**Then** `ACLED_EMAIL` and `ACLED_PASSWORD` environment variables replace `ACLED_ACCESS_TOKEN`
+**And** a shared `server/_shared/acled-auth.ts` module handles OAuth2 token fetch, caching (Redis, 23h TTL), and refresh
+**And** `POST https://acleddata.com/oauth/token` is called with `grant_type=password`, `client_id=acled`, email, and password
+**And** the access token (24h expiry) is cached in Redis under `acled:oauth:token` with the environment key prefix
+**And** on cache miss or 401 response, the module re-authenticates automatically
+**And** refresh token (14-day expiry) is used when available before falling back to full re-authentication
+
+**Given** the OAuth2 token manager is in place
+**When** the three consuming files are updated
+**Then** `server/worldmonitor/conflict/v1/list-acled-events.ts`, `server/worldmonitor/unrest/v1/list-unrest-events.ts`, and `server/worldmonitor/intelligence/v1/get-risk-scores.ts` all import the shared auth module
+**And** the API endpoint URL and query parameters remain unchanged (only auth mechanism changes)
+**And** graceful degradation is preserved — missing credentials return empty arrays, not crashes
+
+**Given** `ACLED_EMAIL` or `ACLED_PASSWORD` is not set
+**When** any ACLED-dependent endpoint is called
+**Then** it returns an empty result set with no errors (existing graceful degradation behavior)
+
+**Given** the `.env.example` and `fork.env.example` files exist
+**When** the migration is complete
+**Then** `ACLED_ACCESS_TOKEN` is removed and replaced with `ACLED_EMAIL` and `ACLED_PASSWORD` with descriptions
+
+**Affected files:** `server/worldmonitor/conflict/v1/list-acled-events.ts`, `server/worldmonitor/unrest/v1/list-unrest-events.ts`, `server/worldmonitor/intelligence/v1/get-risk-scores.ts`, `server/_shared/acled-auth.ts` (new), `.env.example`
+
+**Tier:** 3 (modifies upstream server files)
+
+**Priority:** Unprioritized — schedule when ACLED data is needed or old API stops working
