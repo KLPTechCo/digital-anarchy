@@ -194,6 +194,8 @@ if (urlParams.get('settings') === '1') {
     .init()
     .then(() => {
       clearChunkReloadGuard(chunkReloadStorageKey);
+      // [fork] Situation Monitor customizations — Tier 2 hook
+      import('./fork/index').then(m => m.init()).catch(e => console.warn('[fork] init failed:', e));
     })
     .catch(console.error);
 }
