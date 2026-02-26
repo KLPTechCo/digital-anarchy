@@ -727,6 +727,7 @@ tryInvokeTauri<T>(command, payload)   // returns null on failure
 ```
 
 Used by:
+
 - `runtime.ts` — get bearer token for sidecar auth
 - `runtime-config.ts` — read/write secrets from Rust keychain
 - `persistent-cache.ts` — read/write persistent cache entries

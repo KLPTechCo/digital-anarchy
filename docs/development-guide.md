@@ -187,6 +187,7 @@ These power live vessel tracking and aircraft data via a WebSocket relay deploye
 ### Public Data Sources (No Keys Required)
 
 The following data sources work without any API keys:
+
 - **UCDP** (Uppsala Conflict Data Program)
 - **UNHCR** (UN Refugee Agency, CC BY 4.0)
 - **Open-Meteo** (Copernicus ERA5 climate data)
@@ -425,6 +426,7 @@ npm run desktop:dev
 ```
 
 The `desktop:dev` command:
+
 1. Syncs version from `package.json` to `tauri.conf.json` and `Cargo.toml`
 2. Sets `VITE_DESKTOP_RUNTIME=1`
 3. Builds the sidecar sebuf bundle
@@ -449,6 +451,7 @@ bash scripts/download-node.sh --target aarch64-apple-darwin
 ```
 
 Supported targets:
+
 - `x86_64-pc-windows-msvc`
 - `x86_64-apple-darwin`
 - `aarch64-apple-darwin`
@@ -469,11 +472,13 @@ npm run desktop:package:macos:full:sign   # Signed .app + .dmg
 ```
 
 The packaging script (`scripts/desktop-package.mjs`):
+
 1. Syncs versions across `package.json`, `tauri.conf.json`, `Cargo.toml`
 2. Downloads the platform-specific Node.js runtime
 3. Runs `tauri build` with the appropriate variant config and bundle types
 
 **Bundle types by OS:**
+
 - macOS: `.app` + `.dmg`
 - Windows: `.exe` (NSIS) + `.msi`
 - Linux: `.AppImage`
@@ -481,11 +486,13 @@ The packaging script (`scripts/desktop-package.mjs`):
 ### Code Signing
 
 **macOS** requires:
+
 - `TAURI_BUNDLE_MACOS_SIGNING_IDENTITY` (or `APPLE_SIGNING_IDENTITY`)
 - `TAURI_BUNDLE_MACOS_PROVIDER_SHORT_NAME`
 - Apple Developer Certificate imported into keychain
 
 **Windows** requires one of:
+
 - `TAURI_BUNDLE_WINDOWS_CERTIFICATE_THUMBPRINT`
 - `TAURI_BUNDLE_WINDOWS_CERTIFICATE` + `TAURI_BUNDLE_WINDOWS_CERTIFICATE_PASSWORD`
 
@@ -539,6 +546,7 @@ The codebase produces three app variants from the same source, each targeting a 
 ### What Variants Control
 
 Variants share all source code but differ in:
+
 - Default visible panels
 - Map layers and data sources highlighted
 - RSS feed selection and categorization
@@ -650,6 +658,7 @@ refactor: extract threat classifier into separate module
 9. **Document** in `docs/DOCUMENTATION.md`
 
 **Data source requirements:**
+
 - Freely accessible (no paid-only APIs for core functionality)
 - Permissive license or public government data
 - Updates at least daily for real-time relevance
