@@ -1,6 +1,6 @@
 # World Monitor — Architecture Document
 
-**Version**: 2.5.5 | **Last Updated**: 2026-02-23
+**Version**: 2.5.8 | **Last Updated**: 2026-02-26
 
 ## 1. Executive Summary
 

@@ -83,6 +83,7 @@ npm install
 npm run dev              # Full variant on http://localhost:5173
 npm run dev:tech         # Tech variant
 npm run dev:finance      # Finance variant
+npm run dev:happy        # Happy variant (positive news dashboard)
 ```
 
 ### Option 3: Desktop App
@@ -165,7 +166,7 @@ These power live vessel tracking and aircraft data via a WebSocket relay deploye
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VITE_VARIANT` | `full` | App variant: `full`, `tech`, or `finance` |
+| `VITE_VARIANT` | `full` | App variant: `full`, `tech`, `finance`, or `happy` |
 | `VITE_MAP_INTERACTION_MODE` | `3d` | `flat` (2D) or `3d` (pitch/rotation enabled) |
 | `VITE_SENTRY_DSN` | _(empty)_ | Client-side Sentry DSN; leave empty to disable |
 | `VITE_POSTHOG_KEY` | _(empty)_ | PostHog analytics key; leave empty to disable |
@@ -202,6 +203,7 @@ The following data sources work without any API keys:
 | `npm run dev` | Start Vite dev server — full variant (http://localhost:5173) |
 | `npm run dev:tech` | Start Vite dev server — tech variant |
 | `npm run dev:finance` | Start Vite dev server — finance variant |
+| `npm run dev:happy` | Start Vite dev server — happy variant (positive news) |
 | `npm run preview` | Preview production build locally |
 | `npm run desktop:dev` | Launch Tauri desktop dev window with hot-reload |
 
@@ -215,6 +217,7 @@ The following data sources work without any API keys:
 | `npm run build:full` | Explicit full variant build |
 | `npm run build:tech` | Tech variant build |
 | `npm run build:finance` | Finance variant build |
+| `npm run build:happy` | Happy variant build |
 | `npm run build:desktop` | Desktop build (sidecar sebuf bundle + tsc + vite build) |
 | `npm run build:sidecar-sebuf` | Bundle the sebuf RPC gateway for the Tauri sidecar |
 

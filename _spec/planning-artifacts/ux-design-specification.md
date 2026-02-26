@@ -34,7 +34,7 @@ Situation Monitor takes an existing, production-grade intelligence dashboard (Wo
 
 **Primary:** Ed — solo operator and daily power user. Uses the platform as a morning briefing tool, synthesizing overnight developments across geopolitical, economic, and security domains in 30 minutes. Also the operator who diagnoses and fixes issues (API key rotation, endpoint failures) via the **settings page** (`settings.html`) — a separate HTML entry point with its own UX surface. Needs: fast load, AI summaries surfacing top developments, cross-panel data correlation, operational visibility.
 
-**Secondary:** Rachel — prediction market edge-seeker. Visits 3-4x/week focused on specific regions where she has market exposure. Cross-references military posture + AI threat classification + prediction market pricing to identify informational edges. Needs: region-focused drill-down, threat-to-market correlation, selective domain engagement (uses 3-4 of 17 domains).
+**Secondary:** Rachel — prediction market edge-seeker. Visits 3-4x/week focused on specific regions where she has market exposure. Cross-references military posture + AI threat classification + prediction market pricing to identify informational edges. Needs: region-focused drill-down, threat-to-market correlation, selective domain engagement (uses 3-4 of 20 domains).
 
 **Tertiary:** Marcus — casual visitor arriving via shared social link. High engagement per session but low frequency. Expects immediate orientation from deep-link parameters. Retention driver is the cross-domain "unexpected intersection" insight. **Note:** Mobile-arriving users encounter a `MobileWarningModal` ("desktop recommended" dismissable notice) as their first interaction — potentially hostile to consumer discovery via social shares. Needs: deep-link auto-navigation, self-explanatory first impression, zero signup friction.
 
@@ -52,7 +52,7 @@ Situation Monitor takes an existing, production-grade intelligence dashboard (Wo
 
 5. **Visual change verification** — Every UX modification requires manual QA on Vercel Preview (6 FRs with zero automated visual testing). This constrains iteration speed and requires disciplined visual review process.
 
-6. **God Object UX ceiling** — `App.ts` (4,629 LOC) owns all panel lifecycle. Any UX change that requires panel behavior modification (visibility, ordering logic, conditional rendering) is a Tier 3 change with high merge risk. UX ambitions must be calibrated against this structural constraint. **Specific uncertainty:** curated default panel ordering may be Tier 3 if `App.ts → createPanels()` hardcodes the order rather than reading from an overridable config. Requires spike to confirm.
+6. **Modular architecture opportunity** — **[v2.5.8 UPDATE]** `App.ts` has been decomposed from a 4,629 LOC God Object into a 498 LOC shell + 8 modules in `src/app/`. Panel lifecycle is now in `panel-layout.ts` (930 LOC), event routing in `event-handlers.ts` (731 LOC). UX changes requiring panel behavior modification (visibility, ordering logic, conditional rendering) may now be achievable as Tier 2 changes by hooking into specific modules. **Specific update:** curated default panel ordering is more likely Tier 2 if `panel-layout.ts` exposes ordering hooks. Spike should confirm.
 
 ### Design Opportunities
 
@@ -147,7 +147,7 @@ All three entry points converge on the same App.ts event flow and must produce i
 | **OG card in social feed** | Rachel (sharing) | Yes | Preview card is compelling at thumbnail size. Threat badge, country, branding readable. | OG validator tool (opengraph.xyz). Manual visual QA. |
 | **⌘K search → drill** | Ed, Rachel | Yes | Keyboard search finds country/topic instantly, triggers full panel update. | E2E test: open search modal → type → select → verify panels respond. |
 | **Operational diagnosis** | Ed | No (tolerable friction) | API key rotation, endpoint debugging via Vercel logs + settings page. | Functional check: settings page loads, keys display, save works. |
-| **Morning briefing complete** | Ed | Yes | Ed closes the laptop feeling informed after 30 min. | Not testable — gut-feel success. Proxy: all 17 domain panels loaded data. |
+| **Morning briefing complete** | Ed | Yes | Ed closes the laptop feeling informed after 30 min. | Not testable — gut-feel success. Proxy: all 20 domain panels loaded data. |
 
 **First-time user success:** A user who arrives for the first time (via direct URL or deep-link) understands what the product does and finds one interesting data point within 30 seconds. They don't need onboarding, tutorials, or tooltips — the globe + panels are self-explanatory because the data IS the interface.
 
@@ -1106,7 +1106,7 @@ These pairs should be visually adjacent or quickly toggle-able in the panel layo
 ### Flow Optimization Principles
 
 1. **Zero-click value** — The scan phase delivers value before any interaction. InsightsPanel + globe hotspots = passive intelligence.
-2. **Progressive disclosure via depth tiers** — Don't front-load all 17 domains. Surface 3-5 top developments in the Glance tier. Reveal domain depth only on drill.
+2. **Progressive disclosure via depth tiers** — Don't front-load all 20 domains. Surface 3-5 top developments in the Glance tier. Reveal domain depth only on drill.
 3. **Exit ramps at every tier** — A 5-second Glance visit is a *success*, not a bounce. Design for it.
 4. **Correlation proximity** — Panels that users cross-reference should be visually adjacent or quickly toggle-able. Priority pairs: Military+Prediction, Seismic+Humanitarian, CII+Economic.
 5. **Freshness over completeness** — A panel with 2 fresh data points beats a panel with 10 stale ones. Timestamp everything.
@@ -1119,16 +1119,16 @@ These pairs should be visually adjacent or quickly toggle-able in the panel layo
 
 ## Component Strategy
 
-The upstream codebase IS the design system — framework-free TypeScript, 52 class-based components, `Panel` base class, CSS custom properties. This section defines what the fork **adds, wraps, or overrides**.
+The upstream codebase IS the design system — framework-free TypeScript, 62 class-based components, `Panel` base class, CSS custom properties. This section defines what the fork **adds, wraps, or overrides**.
 
 ### Design System Components (Inherited)
 
-Upstream provides 52 components (22,883 LOC) across 9 categories:
+Upstream provides 62 components (~26,696 LOC) across 9 categories:
 
 | Category | Count | LOC | Coverage |
 |----------|-------|-----|----------|
 | Map | 3 | 9,967 | Complete — 3-tier architecture (DeckGLMap → MapComponent → MapContainer facade) |
-| Panel | 26 | 6,887 | Complete — all 17 domains covered (InsightsPanel, CIIPanel, PredictionPanel, etc.) |
+| Panel | 26 | 6,887 | Complete — all 20 domains covered (InsightsPanel, CIIPanel, PredictionPanel, TradePanel, etc.) |
 | Feed | 3 | 1,667 | Complete — NewsPanel, LiveNewsPanel, LiveWebcamsPanel |
 | Modal | 4 | 1,268 | Complete — SearchModal, SignalModal, CountryIntelModal, StoryModal, MobileWarningModal |
 | Widget | 5 | 1,021 | Complete — IntelligenceGapBadge, PizzIntIndicator, PlaybackControl, etc. |
