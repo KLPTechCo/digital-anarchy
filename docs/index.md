@@ -98,22 +98,26 @@
 ## Getting Started
 
 ### For New Developers
+
 1. Read [Project Overview](./project-overview.md) for high-level understanding
 2. Read [Architecture](./architecture.md) for system design
 3. Read [Development Guide](./development-guide.md) for setup and commands
 4. Reference [Source Tree Analysis](./source-tree-analysis.md) when navigating code
 
 ### For API Work
+
 1. Read [API Contracts](./api-contracts.md) for all endpoints
 2. Read [ADDING_ENDPOINTS.md](./ADDING_ENDPOINTS.md) to add new sebuf RPCs
 3. Reference OpenAPI specs in `docs/api/` for request/response schemas
 
 ### For Desktop Work
+
 1. Read [Integration Architecture](./integration-architecture.md) §C for desktop path
 2. Read [DESKTOP_CONFIGURATION.md](./DESKTOP_CONFIGURATION.md) for secret keys
 3. Read [RELEASE_PACKAGING.md](./RELEASE_PACKAGING.md) for build/sign/package
 
 ### For Brownfield PRD
+
 Point the BMAD PRD workflow to this `docs/index.md` as the project knowledge input. The generated documentation provides comprehensive context for feature planning.
 
 ## Documentation Stats

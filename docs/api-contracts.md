@@ -315,6 +315,7 @@ The API key system is **origin-aware** with different behavior for desktop vs. w
 | No origin header | No | Key not required |
 
 **Desktop origin patterns:**
+
 - `https?://tauri.localhost(:port)?`
 - `https?://{subdomain}.tauri.localhost(:port)?`
 - `tauri://localhost`
