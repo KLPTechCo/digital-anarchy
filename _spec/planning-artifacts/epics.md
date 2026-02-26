@@ -8,6 +8,8 @@ inputDocuments:
 
 # Situation Monitor - Epic Breakdown
 
+> **v2.5.8 Sync Update (2025-06-10):** ARCH-35/36/59/60 revised — `App.ts` decomposed from 4,629 LOC God Object to 498 LOC shell + 8 `src/app/` modules. Merge risk significantly reduced. FR3 updated to 20 domains (was 17). ARCH-4 updated for 4 build variants (was 3). Story 0.1 spike expanded to evaluate modular hook targets. Story 6.1 merge risk map updated. Component count corrected from 52 to 62.
+
 ## Overview
 
 This document provides the complete epic and story breakdown for Situation Monitor, decomposing the requirements from the PRD, UX Design, and Architecture into implementable stories.
@@ -29,7 +31,7 @@ Every fork story in every epic MUST satisfy ALL of the following before merge:
 
 FR1: Users can view a 3D globe with real-time data overlay clusters representing active global events
 FR2: Users can click globe clusters to navigate to specific countries or regions and see detailed data
-FR3: Users can view data panels for each of the 17 intelligence domains (conflict, seismology, cyber, energy, markets, etc.)
+FR3: Users can view data panels for each of the 20 intelligence domains (conflict, seismology, cyber, energy, markets, trade, giving, positive events, etc.)
 FR4: Users can cross-reference data across multiple domain panels simultaneously (e.g., conflict + markets + prediction markets)
 FR5: Users can view AI-generated summaries and threat classifications for countries and regions
 FR6: Users can view a Country Instability Index with threat level indicators per country
@@ -110,7 +112,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-1: Vercel Hobby Tier imposes 100GB/month bandwidth limit — all architectural decisions must account for this ceiling
 - ARCH-2: Upstash Redis Free Tier imposes 256MB storage limit alongside the command quota
 - ARCH-3: Dual runtime model: Edge Functions (middleware, RPC gateway) and Serverless Functions (legacy API, OG image) have different timeout limits, memory models, and execution constraints — code must target the correct runtime
-- ARCH-4: `VITE_VARIANT=full` is the only active build variant; tech and finance variants are excluded at build time
+- ARCH-4: `VITE_VARIANT=full` is the primary build variant for the fork; upstream also ships tech, finance, and happy variants (4 total) — fork deploys `full` only
 - ARCH-5: Three Tauri desktop config files are dormant for web-only deployment — do not modify or depend on them
 - ARCH-6: Convex and Railway AIS Relay are dormant infrastructure — present in repo but excluded from architecture
 - ARCH-7: Local development requires a two-process model: `make dev` (Vite SPA) + `vercel dev` (API emulation)
@@ -151,8 +153,8 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 
 **Upstream Sync Workflow:**
 - ARCH-34: Upstream sync pattern: dedicated `upstream-sync` branch → merge upstream → full test suite → PR into `main`
-- ARCH-35: `App.ts` (4,629 LOC God Object) is the highest-risk merge surface — any fork customization touching it creates guaranteed merge conflicts
-- ARCH-36: Merge Risk Map: Critical = `App.ts`; High = `proto/**`, `src/generated/**`; Medium = domain handlers, `package.json`; Low = `public/`, `index.html`
+- ARCH-35: ~~`App.ts` was a 4,629 LOC God Object~~ **[v2.5.8 UPDATE]** Upstream decomposed `App.ts` into a 498 LOC shell + 8 modules in `src/app/` (data-loader 1,823 LOC, panel-layout 930 LOC, event-handlers 731 LOC, country-intel 530 LOC, search-manager 552 LOC, app-context 108 LOC, refresh-scheduler 108 LOC, desktop-updater 205 LOC). Fork hooks can now target specific modules rather than instrumenting a monolith. Merge risk is significantly reduced.
+- ARCH-36: Merge Risk Map **[v2.5.8 UPDATE]**: Critical = `src/app/panel-layout.ts`, `src/app/data-loader.ts`; High = `proto/**`, `src/generated/**`, `src/app/event-handlers.ts`; Medium = domain handlers, `package.json`, other `src/app/` modules; Low = `App.ts` (now thin shell), `public/`, `index.html`
 - ARCH-37: Post-merge checklist: verify `main.ts` fork hook intact, run `make generate`, resolve `package.json` conflicts, run full test suite
 - ARCH-38: Proto sync: run `make generate` after every upstream merge; if upstream changes the codegen tool, catch it before it silently breaks the build
 - ARCH-39: Codegen dependency chain: `.proto` change → `buf generate` → `src/generated/` → `server/` imports; proto changes cascade across four directories
@@ -184,9 +186,9 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-57: `lighthouse-ci` in GitHub Actions → modify `.github/workflows/ci.yml` (Tier 3)
 - ARCH-58: Automated upstream sync detection → new `.github/workflows/upstream-sync.yml` (Tier 2)
 
-**Architectural God Object Risk:**
-- ARCH-59: `App.ts` (4,629 LOC) owns component lifecycle, event routing, and panel management — bottleneck for fork customizations and highest-conflict file
-- ARCH-60: Components don't communicate directly — all panel behavior routes through `App.ts`; fork hooks should observe but not mutate `App.ts` internal state
+**Architectural Modularity (formerly God Object Risk):**
+- ARCH-59: **[v2.5.8 UPDATE]** `App.ts` has been decomposed into `src/app/` modules. Component lifecycle is managed by `panel-layout.ts` (930 LOC), event routing by `event-handlers.ts` (731 LOC), and data management by `data-loader.ts` (1,823 LOC). Fork customizations can target specific modules — the monolithic bottleneck no longer exists.
+- ARCH-60: **[v2.5.8 UPDATE]** Panel behavior now routes through `src/app/panel-layout.ts` and `src/app/event-handlers.ts` rather than a single `App.ts` God Object. Fork hooks should still observe but not mutate internal state — but can now hook at module boundaries (e.g., panel ordering in `panel-layout.ts`).
 
 #### From UX Design
 
@@ -425,7 +427,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 
 **FRs covered:** FR31, FR32, FR33, FR34
 **P0 NFRs addressed:** NFR33
-**Key ARCH reqs:** ARCH-34–39, ARCH-59–60
+**Key ARCH reqs:** ARCH-34–39, ARCH-59–60 *(note: ARCH-35/36/59/60 updated for v2.5.8 App.ts decomposition)*
 **Key UX reqs:** UX-REQ-42, UX-REQ-45
 
 **User outcome:** Documented `upstream-sync` branch pattern. Post-merge checklist (fork hook intact, `make generate` passes, dependency conflicts resolved, full test suite green). Merge Risk Map referenced. Playwright screenshot comparison for <2min visual verification of 3 key views. Tier 2 patch signature assertions catch upstream breaking changes at boot.
@@ -517,7 +519,12 @@ So that I can proceed with branding and feature work with confidence that the fo
 **When** I inject `<style id="fork-theme">` with `:root` CSS variable overrides (e.g., `--sm-accent: #4dd0e1`)
 **Then** the override propagates to a representative sample of at least 10 components across 3 categories (panels, modals, globe container)
 **And** any components with hardcoded values that DON'T respond are documented in a CSS coverage audit
-**And** the full 52-component audit is deferred to Epic 2
+**And** the full 62-component audit is deferred to Epic 2
+
+**Given** the `src/app/` modular architecture (v2.5.8)
+**When** the spike evaluates hook placement
+**Then** it documents which `src/app/` module(s) are the optimal hook targets for fork customizations (likely `panel-layout.ts` for panel ordering, `event-handlers.ts` for interaction interception)
+**And** the spike validates that a Tier 2 hook can intercept module behavior without modifying module source files
 
 **Given** the hook and CSS injection are working locally
 **When** I push to a branch and Vercel creates a Preview deployment
@@ -1130,7 +1137,7 @@ So that I can keep the fork current without risking breakage.
 
 **Given** the Merge Risk Map is referenced
 **When** conflicts arise
-**Then** I prioritize by risk: Critical = `App.ts`, High = `proto/**`, `src/generated/**`, Medium = domain handlers, `package.json`, Low = `public/`, `index.html` (ARCH-36)
+**Then** I prioritize by risk: Critical = `src/app/panel-layout.ts`, `src/app/data-loader.ts`; High = `proto/**`, `src/generated/**`, `src/app/event-handlers.ts`; Medium = domain handlers, `package.json`, other `src/app/` modules; Low = `App.ts` (thin shell), `public/`, `index.html` (ARCH-36)
 **And** the post-merge checklist is documented in `docs/UPSTREAM_SYNC.md`
 
 **Tier:** 1
@@ -1483,3 +1490,51 @@ So that regressions are caught without manual checking.
 **Then** a notification (GitHub issue or workflow alert) is created in the fork repo (ARCH-58, Tier 2)
 
 **Tier:** 3 + 2
+
+---
+
+## Backlog: Upstream Fixes & Data Source Migrations
+
+### Story B.1: ACLED API OAuth2 Migration
+
+As an **operator**,
+I want the ACLED integration to use the current OAuth2 authentication flow,
+So that conflict, unrest, and risk score data continues flowing after the deprecated API is removed.
+
+**Context:** ACLED deprecated their static access token API. The new API requires OAuth2 with `grant_type=password` to obtain a 24-hour access token + 14-day refresh token. The upstream codebase (3 files) still uses the old `ACLED_ACCESS_TOKEN` Bearer pattern.
+
+**Acceptance Criteria:**
+
+**Given** this story is picked up for implementation
+**When** the developer checks the current upstream codebase
+**Then** they first verify whether upstream (koala73/worldmonitor) has already migrated to the new ACLED OAuth2 flow
+**And** if upstream has fixed it, this story is closed as resolved-upstream with a note on which commit/release included the fix
+
+**Given** upstream has NOT fixed the ACLED authentication
+**When** the migration is implemented
+**Then** `ACLED_EMAIL` and `ACLED_PASSWORD` environment variables replace `ACLED_ACCESS_TOKEN`
+**And** a shared `server/_shared/acled-auth.ts` module handles OAuth2 token fetch, caching (Redis, 23h TTL), and refresh
+**And** `POST https://acleddata.com/oauth/token` is called with `grant_type=password`, `client_id=acled`, email, and password
+**And** the access token (24h expiry) is cached in Redis under `acled:oauth:token` with the environment key prefix
+**And** on cache miss or 401 response, the module re-authenticates automatically
+**And** refresh token (14-day expiry) is used when available before falling back to full re-authentication
+
+**Given** the OAuth2 token manager is in place
+**When** the three consuming files are updated
+**Then** `server/worldmonitor/conflict/v1/list-acled-events.ts`, `server/worldmonitor/unrest/v1/list-unrest-events.ts`, and `server/worldmonitor/intelligence/v1/get-risk-scores.ts` all import the shared auth module
+**And** the API endpoint URL and query parameters remain unchanged (only auth mechanism changes)
+**And** graceful degradation is preserved — missing credentials return empty arrays, not crashes
+
+**Given** `ACLED_EMAIL` or `ACLED_PASSWORD` is not set
+**When** any ACLED-dependent endpoint is called
+**Then** it returns an empty result set with no errors (existing graceful degradation behavior)
+
+**Given** the `.env.example` and `fork.env.example` files exist
+**When** the migration is complete
+**Then** `ACLED_ACCESS_TOKEN` is removed and replaced with `ACLED_EMAIL` and `ACLED_PASSWORD` with descriptions
+
+**Affected files:** `server/worldmonitor/conflict/v1/list-acled-events.ts`, `server/worldmonitor/unrest/v1/list-unrest-events.ts`, `server/worldmonitor/intelligence/v1/get-risk-scores.ts`, `server/_shared/acled-auth.ts` (new), `.env.example`
+
+**Tier:** 3 (modifies upstream server files)
+
+**Priority:** Unprioritized — schedule when ACLED data is needed or old API stops working

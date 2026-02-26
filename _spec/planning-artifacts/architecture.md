@@ -100,7 +100,7 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 - AGPL-3.0 license (source must stay public)
 
 **Build-Time Variant Exclusion:**
-- `VITE_VARIANT=full` is the only active variant. Tech and finance variants exist in the codebase but are excluded at build time via Vite tree-shaking. Excluded variants produce zero runtime overhead — no code, no assets, no config.
+- `VITE_VARIANT=full` is the primary variant for the fork. Upstream ships 4 variants (full, tech, finance, happy) — all excluded at build time via Vite tree-shaking except the active one. Excluded variants produce zero runtime overhead — no code, no assets, no config. **[v2.5.8 UPDATE]** Happy variant added (positive news dashboard).
 - Three `tauri.*.conf.json` files exist for desktop builds — entirely dormant for web-only deployment.
 
 **Dormant Infrastructure:**
@@ -155,19 +155,19 @@ Browser → Edge Middleware → RPC Gateway → Router → Domain Handler → Ex
 2. **Edge Middleware** (`middleware.ts`) — Bot blocking, UA filtering
 3. **RPC Gateway** (`api/[domain]/v1/[rpc].ts`) — CORS, API key validation, route dispatch
 4. **Router** (`server/router.ts`) — Static Map<path, handler>, O(1) lookup
-5. **Domain Handlers** (`server/worldmonitor/*/v1/handler.ts`) — 17 domains, external API calls
+5. **Domain Handlers** (`server/worldmonitor/*/v1/handler.ts`) — 20 domains, external API calls
 6. **Upstash Redis** — Cross-request caching (AI dedup, risk scores, temporal baselines)
 7. **PWA Service Worker** — Offline caching layer (cache-first assets, network-first data)
 8. **OG Image Pipeline** (`api/story.js`, `api/og-story.js`) — Serverless (not Edge), 10s budget
 9. **Legacy REST** (`api/*.js`) — 11 non-RPC endpoints (RSS proxy, YouTube, EIA, version)
 
-**God Object Risk:** `App.ts` (4,629 LOC) is the SPA orchestrator — owns component lifecycle, event routing, panel management. It's the highest-conflict file in any upstream merge and the bottleneck for fork customizations. Any architectural decision touching panel behavior routes through this file.
+**App.ts Modular Architecture:** **[v2.5.8 UPDATE]** `App.ts` has been decomposed from a 4,629 LOC God Object into a 498 LOC thin shell + 8 modules in `src/app/`: `data-loader.ts` (1,823 LOC), `panel-layout.ts` (930 LOC), `event-handlers.ts` (731 LOC), `country-intel.ts` (530 LOC), `search-manager.ts` (552 LOC), `app-context.ts` (108 LOC), `refresh-scheduler.ts` (108 LOC), `desktop-updater.ts` (205 LOC). Fork hooks can target specific modules (e.g., panel ordering in `panel-layout.ts`, interaction interception in `event-handlers.ts`) rather than instrumenting a monolith. Merge risk is distributed across focused modules rather than concentrated in a single critical file.
 
 ### Cross-Cutting Concerns
 
 1. **Cost Containment** — $0 operating budget means every architectural decision must account for free tier limits. Redis command counts, API rate limits, bandwidth — all constrained.
 
-2. **Upstream Compatibility** — The fork must remain mergeable with upstream. Architectural changes that diverge from upstream patterns (file structure, build system, proto definitions) create merge debt. `App.ts` is the highest-risk merge surface.
+2. **Upstream Compatibility** — The fork must remain mergeable with upstream. Architectural changes that diverge from upstream patterns (file structure, build system, proto definitions) create merge debt. **[v2.5.8 UPDATE]** `src/app/panel-layout.ts` and `src/app/data-loader.ts` are the highest-risk merge surfaces (replacing the former `App.ts` monolith).
 
 3. **Dual Runtime** — Edge Functions (middleware, RPC gateway) vs Serverless Functions (legacy API, OG image generation). Different runtime constraints, different timeout limits, different memory models.
 
@@ -187,7 +187,7 @@ Browser → Edge Middleware → RPC Gateway → Router → Domain Handler → Ex
 |---|---|
 | **Greenfield (Vite + framework)** | Rejected. 107.5K LOC of working product already exists. Rewrite = years of effort for zero user-visible gain. |
 | **Alternative fork base** | No alternatives exist. worldmonitor is the only open-source intelligence monitoring SPA in this space. |
-| **worldmonitor@v2.5.5 fork** | **Selected.** Full product with 52 components, 79 services, 17 API domains, 46 RPCs, working CI/CD, E2E tests. Already deployed and verified on Vercel. |
+| **worldmonitor@v2.5.5 fork** | **Selected.** Full product with 62 components, ~95 services, 20 API domains, 57 RPCs, working CI/CD, E2E tests. Already deployed and verified on Vercel. **[v2.5.8 UPDATE]** Counts updated for upstream sync. |
 
 ### Selected Starter: worldmonitor@v2.5.5 (Fork) — Already Deployed
 
@@ -232,7 +232,7 @@ Any `.proto` file change requires regeneration, updates to generated TypeScript,
 
 **Code Organization:**
 - `src/` — SPA (components, services, utils, workers, config, types)
-- `server/` — Backend handlers (17 domains, shared utilities)
+- `server/` — Backend handlers (20 domains, shared utilities)
 - `api/` — Vercel serverless entry points (RPC gateway + legacy REST)
 - `proto/` — Protocol buffer definitions
 - `src-tauri/` — Desktop shell (dormant for web-only deployment)
@@ -243,9 +243,9 @@ Any `.proto` file change requires regeneration, updates to generated TypeScript,
 - **CI pipeline:** GitHub Actions: lint → unit tests → buf breaking → build → Playwright E2E. Green = safe to merge.
 
 **Constraints Imposed by Starter:**
-1. No framework adoption possible — 52 components use custom lifecycle, not React/Vue/Angular patterns
+1. No framework adoption possible — 62 components use custom lifecycle, not React/Vue/Angular patterns
 2. Proto schema changes require `buf breaking` pass — can't freely evolve APIs
-3. `App.ts` (4,629 LOC) is the God Object — all panel changes route through it
+3. **[v2.5.8 UPDATE]** `App.ts` decomposed into `src/app/` modules — panel changes route through `panel-layout.ts` (930 LOC) and `event-handlers.ts` (731 LOC) rather than a single God Object
 4. WebGL 2 mandatory — deck.gl/MapLibre won't degrade to Canvas
 5. AGPL-3.0 — all customizations must remain open source
 
@@ -257,17 +257,18 @@ Fork is deployed and verified working on Vercel. Upstream remote configured. CI/
 **Upstream Sync Strategy:**
 - Cadence: At least monthly (per PRD measurable outcomes)
 - Pattern: Dedicated `upstream-sync` branch → merge upstream → full test suite → PR into `main`
-- Conflict resolution: `App.ts` is the highest-risk merge surface (4,629 LOC, all panel changes route through it). Any fork customization touching `App.ts` creates guaranteed merge conflicts on next upstream sync.
+- Conflict resolution: **[v2.5.8 UPDATE]** `src/app/panel-layout.ts` (930 LOC) and `src/app/data-loader.ts` (1,823 LOC) are the highest-risk merge surfaces. The former `App.ts` monolith has been decomposed — merge risk is now distributed across focused modules rather than concentrated in a single file.
 - Proto sync: Run `make generate` after every upstream merge. If upstream changes the codegen tool, catch it before it silently breaks the build.
 
-**Merge Risk Map:**
+**Merge Risk Map:** **[v2.5.8 UPDATE]**
 | Risk Level | Files | Reason |
 |---|---|---|
-| **Critical** | `App.ts` | God Object — any panel customization conflicts with upstream panel changes |
+| **Critical** | `src/app/panel-layout.ts`, `src/app/data-loader.ts` | Panel lifecycle and data orchestration — most active upstream change surfaces |
 | **High** | `proto/**`, `src/generated/**` | Codegen cascade — upstream proto changes require full regeneration |
+| **High** | `src/app/event-handlers.ts` | UI event routing — fork interaction hooks may conflict |
 | **Medium** | `server/worldmonitor/*/v1/handler.ts` | Domain handler changes — upstream may add/modify API logic |
-| **Medium** | `package.json`, `package-lock.json` | Sentry dep addition (Tier 3) — conflicts on every upstream sync that touches deps |
-| **Low** | `public/`, `index.html`, branding assets | Fork-specific, upstream unlikely to conflict |
+| **Medium** | `package.json`, `package-lock.json`, other `src/app/` modules | Dep conflicts + supporting module evolution |
+| **Low** | `App.ts` (thin shell), `public/`, `index.html`, branding assets | Shell is stable; fork-specific assets unlikely to conflict |
 
 **Upstream Sync Checklist:**
 - Verify `main.ts` diff — confirm the single-line fork hook is intact after merge
@@ -730,7 +731,7 @@ situation-monitor/
 │   ├── buf.gen.yaml            # Codegen configuration
 │   ├── buf.yaml                # Buf module configuration
 │   ├── sebuf/                  # sebuf framework protos
-│   └── worldmonitor/           # Domain protos (17 domains)
+│   └── worldmonitor/           # Domain protos (20 domains)
 ├── public/                     # Static assets (served directly)
 │   ├── llms.txt                # LLM context file (← FORK: rebrand)
 │   ├── llms-full.txt           # Full LLM context (← FORK: rebrand)
@@ -751,23 +752,32 @@ situation-monitor/
 │   ├── router.ts               # Static route map, O(1) lookup
 │   ├── _shared/                # Cross-domain server utilities
 │   │   └── redis.ts            # ← FORK: Create or modify — add prefixedKey() wrapper
-│   └── worldmonitor/           # Domain handlers (17 domains)
+│   └── worldmonitor/           # Domain handlers (20 domains)
 │       └── {domain}/
 │           └── v1/
 │               └── handler.ts  # Domain-specific API logic
 ├── src/                        # Frontend SPA source
-│   ├── App.ts                  # GOD OBJECT (4,629 LOC) — panel lifecycle
+│   ├── App.ts                  # Thin shell (498 LOC) — delegates to src/app/ modules
 │   ├── main.ts                 # Entry point (← FORK: +1 line for hook)
 │   ├── settings-main.ts        # Settings page entry (ACTIVE — upstream feature)
 │   ├── pwa.d.ts                # PWA type declarations
 │   ├── vite-env.d.ts           # Vite environment types
+│   ├── app/                    # [v2.5.8] App.ts decomposition modules
+│   │   ├── app-context.ts      # Shared app state (108 LOC)
+│   │   ├── data-loader.ts      # Data fetching orchestration (1,823 LOC)
+│   │   ├── panel-layout.ts     # Panel lifecycle & grid (930 LOC)
+│   │   ├── event-handlers.ts   # UI event routing (731 LOC)
+│   │   ├── country-intel.ts    # Country intel aggregation (530 LOC)
+│   │   ├── search-manager.ts   # Search & filtering (552 LOC)
+│   │   ├── refresh-scheduler.ts # Timed refresh (108 LOC)
+│   │   └── desktop-updater.ts  # Tauri desktop sync (205 LOC)
 │   ├── bootstrap/              # App initialization
-│   ├── components/             # 52 UI components
+│   ├── components/             # 62 UI components
 │   ├── config/                 # Build-time and runtime config
 │   ├── e2e/                    # E2E test helpers
 │   ├── generated/              # buf codegen output — NEVER HAND EDIT
 │   ├── locales/                # i18n translations
-│   ├── services/               # 79 service modules
+│   ├── services/               # ~95 service modules
 │   ├── styles/                 # CSS stylesheets
 │   ├── types/                  # TypeScript type definitions
 │   ├── utils/                  # Utility functions
@@ -898,7 +908,7 @@ This is a completely separate data path from the API pipeline — compute-heavy 
 | FR Category | Primary Location | Supporting Files | Verification Location |
 |---|---|---|---|
 | Deployment & Infrastructure (FR1-FR4) | `vercel.json`, `.github/workflows/`, `Makefile` | `docs/API_KEY_DEPLOYMENT.md` | Vercel dashboard, CI logs |
-| Data Integration (FR5-FR11) | `server/worldmonitor/*/v1/handler.ts` | `server/_shared/redis.ts`, `src/services/` | Each of 17 domain handlers (cross-cutting) |
+| Data Integration (FR5-FR11) | `server/worldmonitor/*/v1/handler.ts` | `server/_shared/redis.ts`, `src/services/` | Each of 20 domain handlers (cross-cutting) |
 | Visualization & UX (FR12-FR16) | `src/components/`, `src/App.ts` | `src/styles/`, `src/config/` | Manual browser QA (WebGL untestable in CI) |
 | AI & Analysis (FR17-FR20) | `src/workers/`, `server/worldmonitor/*/v1/handler.ts` | `src/services/` | Worker output + API response verification |
 | Sharing & Discovery (FR21-FR25) | `api/story.js`, `api/og-story.js`, `middleware.ts` | `public/llms.txt` | OG validator tools, curl bot UA tests |
@@ -909,7 +919,7 @@ This is a completely separate data path from the API pipeline — compute-heavy 
 
 | FR | Description | Verification Strategy |
 |---|---|---|
-| FR10-11 | Graceful degradation for API keys | Test each of 17 domain handlers with missing keys — verify "not configured" state, not crash |
+| FR10-11 | Graceful degradation for API keys | Test each of 20 domain handlers with missing keys — verify "not configured" state, not crash |
 | FR33 | Codegen determinism | `make generate` in CI — diff output against committed `src/generated/` |
 | FR14 | Graceful degradation (general) | Systematic failure injection per data source |
 
@@ -1053,7 +1063,7 @@ FRs with architectural homes but no automated test path — require manual QA on
 
 **✅ Requirements Analysis**
 - [x] Project context analyzed (brownfield fork, deployed, verified)
-- [x] Scale and complexity assessed (High — 17 domains, 35+ APIs)
+- [x] Scale and complexity assessed (High — 20 domains, 35+ APIs)
 - [x] Technical constraints identified (Vercel Hobby, Upstash Free, inherited arch)
 - [x] Cross-cutting concerns mapped (5 concerns + graceful degradation as core pattern)
 
