@@ -41,13 +41,13 @@ story_location: _spec/implementation-artifacts
 
 development_status:
   # ── Prerequisite: Fork Pattern Validation Spike ──
-  epic-0: in-progress
-  0-1-fork-pattern-validation-spike: in-progress
-  epic-0-retrospective: optional
+  epic-0: done
+  0-1-fork-pattern-validation-spike: done
+  epic-0-retrospective: done
 
   # ── Epic 1: Deployment & Quality Pipeline ──
-  epic-1: backlog
-  1-1-vercel-environment-configuration-redis-key-prefix-isolation: backlog
+  epic-1: in-progress
+  1-1-vercel-environment-configuration-redis-key-prefix-isolation: ready-for-dev
   1-2-ci-pipeline-lint-test-build-proto-breaking-change-detection: backlog
   1-3-endpoint-smoke-test-script: backlog
   1-4-lighthouse-baseline-audit: backlog
