@@ -329,10 +329,6 @@ export class SearchModal {
     return this.commandResults.length + this.results.length;
   }
 
-  private get totalResultCount(): number {
-    return this.commandResults.length + this.results.length;
-  }
-
   private renderResults(): void {
     if (!this.resultsList) return;
 
