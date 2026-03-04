@@ -167,12 +167,12 @@ export class NewsPanel extends Panel {
         this.setCachedSummary(cacheKey, result.summary);
         this.showSummary(result.summary);
       } else {
-        this.summaryContainer.innerHTML = '<div class="panel-summary-error">Could not generate summary</div>';
+        this.summaryContainer.innerHTML = `<div class="panel-summary-error">${t('components.newsPanel.summaryError')}</div>`;
         setTimeout(() => this.hideSummary(), 3000);
       }
     } catch {
       if (!this.element?.isConnected) return;
-      this.summaryContainer.innerHTML = '<div class="panel-summary-error">Summary failed</div>';
+      this.summaryContainer.innerHTML = `<div class="panel-summary-error">${t('components.newsPanel.summaryFailed')}</div>`;
       setTimeout(() => this.hideSummary(), 3000);
     } finally {
       this.isSummarizing = false;
@@ -226,7 +226,7 @@ export class NewsPanel extends Panel {
     this.summaryContainer.innerHTML = `
       <div class="panel-summary-content">
         <span class="panel-summary-text">${escapeHtml(summary)}</span>
-        <button class="panel-summary-close" title="${t('components.newsPanel.close')}">×</button>
+        <button class="panel-summary-close" title="${t('components.newsPanel.close')}" aria-label="${t('components.newsPanel.close')}">×</button>
       </div>
     `;
     this.summaryContainer.querySelector('.panel-summary-close')?.addEventListener('click', () => this.hideSummary());

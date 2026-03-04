@@ -269,10 +269,10 @@ const ALLOWED_DOMAINS = [
   'www.brasilparalelo.com.br',
   // Mexico & LatAm Security
   'mexiconewsdaily.com',
-  'animalpolitico.com',
-  'www.proceso.com.mx',
-  'www.milenio.com',
   'insightcrime.org',
+  'www.primicias.ec',
+  'www.infobae.com',
+  'www.eluniverso.com',
   // Additional
   'news.ycombinator.com',
   // Finance variant
@@ -281,7 +281,6 @@ const ALLOWED_DOMAINS = [
   'cointelegraph.com',
   // Security advisories — government travel advisory feeds
   'travel.state.gov',
-  'www.smartraveller.gov.au',
   'www.safetravel.govt.nz',
   // US Embassy security alerts
   'th.usembassy.gov',
@@ -322,6 +321,14 @@ const ALLOWED_DOMAINS = [
   'www.nature.com',
   'www.livescience.com',
   'www.newscientist.com',
+  // US broadcast & print news
+  'www.pbs.org',
+  'feeds.abcnews.com',
+  'feeds.nbcnews.com',
+  'www.cbsnews.com',
+  'moxie.foxnews.com',
+  'feeds.content.dowjones.io',
+  'thehill.com',
 ];
 
 export default async function handler(req) {

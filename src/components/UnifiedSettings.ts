@@ -3,6 +3,8 @@ import { PANEL_CATEGORY_MAP } from '@/config/panels';
 import { SITE_VARIANT } from '@/config/variant';
 import { LANGUAGES, changeLanguage, getCurrentLanguage, t } from '@/services/i18n';
 import { getAiFlowSettings, setAiFlowSetting, getStreamQuality, setStreamQuality, STREAM_QUALITY_OPTIONS } from '@/services/ai-flow-settings';
+import { getGlobeRenderScale, setGlobeRenderScale, GLOBE_RENDER_SCALE_OPTIONS, type GlobeRenderScale } from '@/services/globe-render-settings';
+import { getLiveStreamsAlwaysOn, setLiveStreamsAlwaysOn } from '@/services/live-stream-settings';
 import type { StreamQuality } from '@/services/ai-flow-settings';
 import { escapeHtml } from '@/utils/sanitize';
 import { trackLanguageChange } from '@/services/analytics';
@@ -24,6 +26,10 @@ export interface UnifiedSettingsConfig {
   resetLayout: () => void;
   isDesktopApp: boolean;
   statusPanel?: StatusPanel | null;
+  /** True when the 3D globe is currently active */
+  isGlobeMode?: () => boolean;
+  /** Switch between flat-map and 3D-globe */
+  onMapModeChange?: (useGlobe: boolean) => void;
 }
 
 type TabId = 'general' | 'panels' | 'sources' | 'status';
@@ -164,14 +170,27 @@ export class UnifiedSettings {
         return;
       }
 
+      if (target.id === 'us-globe-render-scale') {
+        setGlobeRenderScale(target.value as GlobeRenderScale);
+        return;
+      }
+
+      if (target.id === 'us-live-streams-always-on') {
+        setLiveStreamsAlwaysOn(target.checked);
+        return;
+      }
+
       // Language select
-      if (target.closest('.unified-settings-lang-select')) {
+      if (target.id === 'us-language') {
         trackLanguageChange(target.value);
         void changeLanguage(target.value);
         return;
       }
 
-      if (target.id === 'us-cloud') {
+      if (target.id === 'us-globe-mode') {
+        this.config.onMapModeChange?.(target.checked);
+        return;
+      } else if (target.id === 'us-cloud') {
         setAiFlowSetting('cloudLlm', target.checked);
         this.updateAiStatus();
       } else if (target.id === 'us-browser') {
@@ -232,18 +251,18 @@ export class UnifiedSettings {
       <div class="modal unified-settings-modal">
         <div class="modal-header">
           <span class="modal-title">${t('header.settings')}</span>
-          <button class="modal-close unified-settings-close">×</button>
+          <button class="modal-close unified-settings-close" aria-label="Close">×</button>
         </div>
-        <div class="unified-settings-tabs">
-          <button class="${tabClass('general')}" data-tab="general">${t('header.tabGeneral')}</button>
-          <button class="${tabClass('panels')}" data-tab="panels">${t('header.tabPanels')}</button>
-          <button class="${tabClass('sources')}" data-tab="sources">${t('header.tabSources')}</button>
-          <button class="${tabClass('status')}" data-tab="status">${t('panels.status')}</button>
+        <div class="unified-settings-tabs" role="tablist" aria-label="Settings">
+          <button class="${tabClass('general')}" data-tab="general" role="tab" aria-selected="${this.activeTab === 'general'}" id="us-tab-general" aria-controls="us-tab-panel-general">${t('header.tabGeneral')}</button>
+          <button class="${tabClass('panels')}" data-tab="panels" role="tab" aria-selected="${this.activeTab === 'panels'}" id="us-tab-panels" aria-controls="us-tab-panel-panels">${t('header.tabPanels')}</button>
+          <button class="${tabClass('sources')}" data-tab="sources" role="tab" aria-selected="${this.activeTab === 'sources'}" id="us-tab-sources" aria-controls="us-tab-panel-sources">${t('header.tabSources')}</button>
+          <button class="${tabClass('status')}" data-tab="status" role="tab" aria-selected="${this.activeTab === 'status'}" id="us-tab-status" aria-controls="us-tab-panel-status">${t('panels.status')}</button>
         </div>
-        <div class="unified-settings-tab-panel${this.activeTab === 'general' ? ' active' : ''}" data-panel-id="general">
+        <div class="unified-settings-tab-panel${this.activeTab === 'general' ? ' active' : ''}" data-panel-id="general" id="us-tab-panel-general" role="tabpanel" aria-labelledby="us-tab-general">
           ${this.renderGeneralContent()}
         </div>
-        <div class="unified-settings-tab-panel${this.activeTab === 'panels' ? ' active' : ''}" data-panel-id="panels">
+        <div class="unified-settings-tab-panel${this.activeTab === 'panels' ? ' active' : ''}" data-panel-id="panels" id="us-tab-panel-panels" role="tabpanel" aria-labelledby="us-tab-panels">
           <div class="unified-settings-region-wrapper">
             <div class="unified-settings-region-bar" id="usPanelCatBar"></div>
           </div>
@@ -255,7 +274,7 @@ export class UnifiedSettings {
             <button class="panels-reset-layout">${t('header.resetLayout')}</button>
           </div>
         </div>
-        <div class="unified-settings-tab-panel${this.activeTab === 'sources' ? ' active' : ''}" data-panel-id="sources">
+        <div class="unified-settings-tab-panel${this.activeTab === 'sources' ? ' active' : ''}" data-panel-id="sources" id="us-tab-panel-sources" role="tabpanel" aria-labelledby="us-tab-sources">
           <div class="unified-settings-region-wrapper">
             <div class="unified-settings-region-bar" id="usRegionBar"></div>
           </div>
@@ -269,7 +288,7 @@ export class UnifiedSettings {
             <button class="sources-select-none">${t('common.selectNone')}</button>
           </div>
         </div>
-        <div class="unified-settings-tab-panel${this.activeTab === 'status' ? ' active' : ''}" data-panel-id="status">
+        <div class="unified-settings-tab-panel${this.activeTab === 'status' ? ' active' : ''}" data-panel-id="status" id="us-tab-panel-status" role="tabpanel" aria-labelledby="us-tab-status">
           <div class="us-status-content" id="usStatusContent"></div>
         </div>
       </div>
@@ -290,7 +309,9 @@ export class UnifiedSettings {
 
     // Update tab buttons
     this.overlay.querySelectorAll('.unified-settings-tab').forEach(el => {
-      el.classList.toggle('active', (el as HTMLElement).dataset.tab === tab);
+      const isActive = (el as HTMLElement).dataset.tab === tab;
+      el.classList.toggle('active', isActive);
+      el.setAttribute('aria-selected', String(isActive));
     });
 
     // Update tab panels
@@ -302,11 +323,47 @@ export class UnifiedSettings {
   private renderGeneralContent(): string {
     const settings = getAiFlowSettings();
     const currentLang = getCurrentLanguage();
+    const globeEnabled = this.config.isGlobeMode?.() ?? false;
 
     let html = '';
 
     // Map section
     html += `<div class="ai-flow-section-label">${t('components.insights.sectionMap')}</div>`;
+
+    // Globe / flat-map mode toggle
+    html += `
+      <div class="ai-flow-toggle-row">
+        <div class="ai-flow-toggle-label-wrap">
+          <div class="ai-flow-toggle-label">3D Globe View</div>
+          <div class="ai-flow-toggle-desc">Switch between flat map and interactive 3D globe (like Sentinel). Zoom, rotate, and explore in three dimensions.</div>
+        </div>
+        <label class="ai-flow-switch">
+          <input type="checkbox" id="us-globe-mode"${globeEnabled ? ' checked' : ''}>
+          <span class="ai-flow-slider"></span>
+        </label>
+      </div>`;
+
+    // Globe render quality (pixel ratio)
+    const globeScale = getGlobeRenderScale();
+    const globeRenderLabelKey = 'components.insights.globeRenderQualityLabel';
+    const globeRenderDescKey = 'components.insights.globeRenderQualityDesc';
+    const globeRenderLabel = t(globeRenderLabelKey);
+    const globeRenderDesc = t(globeRenderDescKey);
+    html += `<div class="ai-flow-toggle-row">
+      <div class="ai-flow-toggle-label-wrap">
+        <div class="ai-flow-toggle-label">${globeRenderLabel === globeRenderLabelKey ? 'Globe render quality' : globeRenderLabel}</div>
+        <div class="ai-flow-toggle-desc">${globeRenderDesc === globeRenderDescKey ? 'Controls the globe canvas resolution. Higher values look sharper on 4K displays but can melt GPUs.' : globeRenderDesc}</div>
+      </div>
+    </div>`;
+    html += `<select class="unified-settings-select" id="us-globe-render-scale">`;
+    for (const opt of GLOBE_RENDER_SCALE_OPTIONS) {
+      const selected = opt.value === globeScale ? ' selected' : '';
+      const translatedLabel = t(opt.labelKey);
+      const label = translatedLabel === opt.labelKey ? opt.fallbackLabel : translatedLabel;
+      html += `<option value="${opt.value}"${selected}>${label}</option>`;
+    }
+    html += `</select>`;
+
     html += this.toggleRowHtml('us-map-flash', t('components.insights.mapFlashLabel'), t('components.insights.mapFlashDesc'), settings.mapNewsFlash);
 
     // Panels section
@@ -344,21 +401,36 @@ export class UnifiedSettings {
         <div class="ai-flow-toggle-desc">${t('components.insights.streamQualityDesc')}</div>
       </div>
     </div>`;
-    html += `<select class="unified-settings-lang-select" id="us-stream-quality">`;
+    html += `<select class="unified-settings-select" id="us-stream-quality">`;
     for (const opt of STREAM_QUALITY_OPTIONS) {
       const selected = opt.value === currentQuality ? ' selected' : '';
       html += `<option value="${opt.value}"${selected}>${opt.label}</option>`;
     }
     html += `</select>`;
 
+    // Live streams idle behavior
+    html += this.toggleRowHtml(
+      'us-live-streams-always-on',
+      t('components.insights.streamAlwaysOnLabel'),
+      t('components.insights.streamAlwaysOnDesc'),
+      getLiveStreamsAlwaysOn(),
+    );
+
     // Language section
     html += `<div class="ai-flow-section-label">${t('header.languageLabel')}</div>`;
-    html += `<select class="unified-settings-lang-select">`;
+    html += `<select class="unified-settings-lang-select" id="us-language">`;
     for (const lang of LANGUAGES) {
       const selected = lang.code === currentLang ? ' selected' : '';
       html += `<option value="${lang.code}"${selected}>${lang.flag} ${lang.label}</option>`;
     }
     html += `</select>`;
+
+    // Community section
+    html += `<div class="ai-flow-section-label">${t('components.community.sectionLabel')}</div>`;
+    html += `<a href="https://github.com/koala73/worldmonitor/discussions/94" target="_blank" rel="noopener" class="us-discussion-link">
+      <span class="us-discussion-dot"></span>
+      <span>${t('components.community.joinDiscussion')}</span>
+    </a>`;
 
     // AI status footer (web-only)
     if (!this.config.isDesktopApp) {
