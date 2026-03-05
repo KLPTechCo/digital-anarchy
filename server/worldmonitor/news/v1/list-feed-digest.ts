@@ -8,6 +8,9 @@ import type {
 } from '../../../../src/generated/server/worldmonitor/news/v1/service_server';
 import { cachedFetchJson } from '../../../_shared/redis';
 import { CHROME_UA } from '../../../_shared/constants';
+
+/** Bootstrap snapshot key for pre-aggregated news insights */
+export const INSIGHTS_BOOTSTRAP_KEY = 'news:insights:v1';
 import { VARIANT_FEEDS, INTEL_SOURCES, type ServerFeed } from './_feeds';
 import { classifyByKeyword, type ThreatLevel } from './_classifier';
 

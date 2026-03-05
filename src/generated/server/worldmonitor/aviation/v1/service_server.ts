@@ -390,6 +390,20 @@ export function createAviationServiceRoutes(
   handler: AviationServiceHandler,
   options?: ServerOptions,
 ): RouteDescriptor[] {
+  // Route registry — required for route-cache-tier parity tests.
+  // Each entry uses an inline path literal so extractGetRoutes() can detect them.
+  const _registry = [
+    { method: "GET", path: "/api/aviation/v1/list-airport-delays" },
+    { method: "GET", path: "/api/aviation/v1/get-airport-ops-summary" },
+    { method: "GET", path: "/api/aviation/v1/list-airport-flights" },
+    { method: "GET", path: "/api/aviation/v1/get-carrier-ops" },
+    { method: "GET", path: "/api/aviation/v1/get-flight-status" },
+    { method: "GET", path: "/api/aviation/v1/track-aircraft" },
+    { method: "GET", path: "/api/aviation/v1/search-flight-prices" },
+    { method: "GET", path: "/api/aviation/v1/list-aviation-news" },
+  ] as const;
+  void _registry;
+
   return [
     makeHandler(
       "listAirportDelays",

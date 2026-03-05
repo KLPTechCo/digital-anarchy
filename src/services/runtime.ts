@@ -319,11 +319,12 @@ export function startSmartPollLoop(
     activeController = controller;
 
     try {
-      const result = await poll({
+      const rawResult = poll({
         signal: controller?.signal,
         reason,
         isHidden: hidden,
       });
+      const result = rawResult instanceof Promise ? await rawResult : rawResult;
 
       if (result === false) {
         backoffMultiplier = Math.min(backoffMultiplier * 2, maxBackoffMultiplier);
