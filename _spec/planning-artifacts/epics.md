@@ -1553,3 +1553,17 @@ So that conflict, unrest, and risk score data continues flowing after the deprec
 **Tier:** 3 (modifies upstream server files)
 
 **Priority:** Unprioritized — schedule when ACLED data is needed or old API stops working
+
+---
+
+## Recurring: Upstream Sync Epics
+
+> These epics are generated on-demand when the fork needs to catch up with `upstream/main`. Each sync follows the same 6-story pattern. See the implementation artifact for full details.
+
+### Upstream Sync — March 2026 (PRs #809–#1851)
+
+**Implementation Artifact:** `_spec/implementation-artifacts/epic-upstream-sync-march-2026.md`
+
+**Stories:** S-1 through S-6 (merge → build validation → env audit → fork integrity → E2E → deploy)
+
+**Scope:** 648 commits, 987 files changed, 146K insertions, 53K deletions. Major additions include AI Forecast engine, MCP data panel, AI Widget Builder, Supply Chain restructure, OFAC Sanctions, Radiation Watch, Thermal Escalation, Kalshi predictions, Astro blog, Mintlify docs, PMTiles map migration.

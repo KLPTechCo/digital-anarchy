@@ -49,3 +49,4 @@ scripts/data/iran-events-latest.json
 _bmad/
 .github/agents/
 .github/prompts/
+.arcwright-ai/
