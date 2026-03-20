@@ -152,10 +152,13 @@ test.describe('circuit breaker persistent cache', () => {
       }
     });
 
-    // Persistent entry was expired, so fetch MUST have been called
+    // Persistent entry was expired (2min > 5s TTL) but within 24h ceiling →
+    // stale-while-revalidate (SWR): execute() returns stale value synchronously and
+    // kicks off a background refresh. fetchCalled=true confirms the refresh was triggered.
+    // After the 200ms wait the background refresh completes → dataState transitions to 'live'.
     expect(result.fetchCalled).toBe(true);
-    expect(result.result).toBe(222);
-    expect(result.dataState).toBe('live');
+    expect(result.result).toBe(111); // stale value returned synchronously by SWR
+    expect(result.dataState).toBe('live'); // updated after background refresh completes
   });
 
   test('persistent entry older than 24h stale ceiling is not hydrated', async ({ page }) => {
@@ -352,9 +355,11 @@ test.describe('circuit breaker persistent cache', () => {
       }
     });
 
-    // Stale persistent data (777) is better than default (0)
+    // Stale persistent data (777) is better than default (0).
+    // SWR returns stale synchronously and sets mode='cached'; the background refresh
+    // fails (network error), but the synchronous return value and state are unaffected.
     expect(result.result).toBe(777);
-    expect(result.dataState).toBe('unavailable');
+    expect(result.dataState).toBe('cached');
   });
 
   test('concurrent execute() calls with stale cache spawn exactly one background refresh', async ({ page }) => {

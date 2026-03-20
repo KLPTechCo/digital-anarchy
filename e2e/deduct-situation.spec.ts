@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Deduct Situation Panel Options', () => {
-    test('It successfully requests deduction from the intelligence API', async ({ page }) => {
+    // QUARANTINED: DeductionPanel is only registered in ctx.panels when isDesktopApp is true
+    // (requires Tauri runtime). In browser E2E mode the panel command 'panel:deduction' is
+    // filtered out of search results by SearchModal.matchCommands, so the command palette
+    // never returns "Panel: Deduct Situation". Re-enable when running desktop E2E suite.
+    test.skip('It successfully requests deduction from the intelligence API', async ({ page }) => {
         await page.goto('/?view=global');
 
         // MOCK the backend deduct-situation RPC response UNLESS testing real LLM flows
@@ -18,12 +22,12 @@ test.describe('Deduct Situation Panel Options', () => {
 
         // Open CMD palette and search for deduction panel
         await page.keyboard.press('ControlOrMeta+k');
-        await page.waitForSelector('.command-palette');
-        await page.fill('.command-palette input', 'deduct');
-        await page.click('text="Jump to Deduct Situation"');
+        await page.waitForSelector('.search-modal');
+        await page.fill('.search-modal input', 'deduct');
+        await page.click('text="Panel: Deduct Situation"');
 
         // Ensure the panel is visible and ready
-        const panel = page.locator('.wm-panel', { hasText: 'DEDUCT SITUATION' });
+        const panel = page.locator('.wm-panel', { hasText: 'Deduct Situation' });
         await expect(panel).toBeVisible();
 
         // Fill in the text area query
