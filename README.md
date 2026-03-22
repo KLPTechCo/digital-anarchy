@@ -1936,6 +1936,125 @@ Set `WS_RELAY_URL` (server-side, HTTPS) and `VITE_WS_RELAY_URL` (client-side, WS
 
 ---
 
+## Endpoint Smoke Test
+
+`scripts/validate-endpoints.sh` is the operator-facing smoke test that validates all 57 API endpoints (46 sebuf RPC + 11 legacy REST) after any deployment.
+
+### Quick Usage
+
+```bash
+# Validate a Vercel preview deployment
+scripts/validate-endpoints.sh --base-url https://your-preview.vercel.app
+
+# Validate production
+scripts/validate-endpoints.sh --base-url https://api.worldmonitor.app
+
+# Validate local dev (vercel dev must be running on port 3000)
+scripts/validate-endpoints.sh
+
+# With a custom timeout
+scripts/validate-endpoints.sh --base-url https://your-preview.vercel.app --timeout-ms 20000
+
+# Or via npm
+npm run test:smoke -- --base-url https://your-preview.vercel.app
+```
+
+### Output
+
+Each endpoint prints a status line:
+
+```
+─── sebuf RPC (46 expected) ───
+  ✓  ListEarthquakes               HTTP 200   312ms
+  ~  ListMarketQuotes              HTTP 401   89ms  — route exists, auth or params needed
+  ✗  ListCyberThreats              HTTP 500   145ms — server error
+
+════════════════════════════════════════
+  Smoke Test Summary
+════════════════════════════════════════
+  Tested     : 57 endpoints
+  Expected   : 57 endpoints
+  Passed     : 52
+  Warned     : 4  (route exists, auth or params needed)
+  Failed     : 1
+```
+
+| Status | Meaning |
+|--------|---------|
+| `✓` PASS | 2xx response with valid JSON body |
+| `~` WARN | 4xx (not 404) — route exists but needs auth or query params (non-fatal in CI without keys) |
+| `✗` FAIL | 5xx, 404 (route missing), empty body, or network/timeout error |
+| `↓` DEGRADED_PASS | Degraded-mode test: non-500 response with graceful degradation signal confirmed |
+
+Exit code `0` when there are zero failures (warns are non-fatal). Exit code `1` if any endpoint fails.
+
+### Graceful Degradation Verification (NFR32)
+
+To verify that removing a single API key causes graceful degradation (not 500 errors) across its domain:
+
+1. **Remove the API key** from your deployment environment variable (e.g., remove `FINNHUB_API_KEY` from Vercel).
+2. **Wait for the deployment** to propagate (typically under 2 minutes for preview).
+3. **Run the smoke test in degraded mode**:
+
+```bash
+# Replace "market" with the domain affected by the removed key
+scripts/validate-endpoints.sh --base-url https://your-preview.vercel.app \
+  --degraded-domain market
+```
+
+In degraded mode:
+- **Affected domain** endpoints must return a non-500 response whose body contains at least one graceful degradation signal (`"not configured"`, `"unavailable"`, `"skipReason"`, etc.) — these show as `↓ DEGRADED_PASS`.
+- **All other domains** must continue to pass normally — regressions are highlighted separately.
+
+**Domain → API key mapping:**
+
+| Domain | Key to remove | Expected degraded signal |
+|--------|---------------|--------------------------|
+| `market` | `FINNHUB_API_KEY` | `{"error":"api key not configured"}` or similar |
+| `economic` | `FRED_API_KEY` or `EIA_API_KEY` | `{"error":"not configured"}` |
+| `military` | `WINGBITS_API_KEY` | `{"skipReason":"..."}` or empty list |
+| `conflict` | `ACLED_ACCESS_TOKEN` | graceful empty or error body |
+| `intelligence` | `OPENROUTER_API_KEY` or `GROQ_API_KEY` | AI summary disabled message |
+
+4. **Restore the key** and redeploy. Re-run without `--degraded-domain` to confirm recovery.
+
+### Endpoint Count Guard
+
+The script asserts that exactly 57 endpoints are tested. If the tested count drifts from `EXPECTED_TOTAL`:
+
+```
+⚠ Endpoint count mismatch: tested 58, expected 57.
+  Update EXPECTED_TOTAL in scripts/validate-endpoints.mjs if route count has changed.
+```
+
+To update: edit `scripts/validate-endpoints.mjs` — add the new route to `ENDPOINTS` and increment `EXPECTED_TOTAL`.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| All endpoints `✗ HTTP 000` / connection refused | `vercel dev` not running | Start with `vercel dev` or point `--base-url` at a live deployment |
+| All endpoints `~ HTTP 401` | No API key in headers | Set `WORLDMONITOR_KEY` env var or check Vercel env vars |
+| RPC endpoint `✗ HTTP 404` | Route missing from build | Run `make generate` and redeploy; check `api/{domain}/v1/[rpc].ts` exists |
+| Legacy endpoint `✗ HTTP 404` | `.js` file missing or renamed | Check `api/{endpoint}.js` exists and is committed |
+| Degraded mode shows WARN instead of DEGRADED_PASS | Key may still be active | Confirm key is removed from deployment env and redeployed |
+| `⚠ COUNT MISMATCH` warning | Route added/removed without updating inventory | Update `ENDPOINTS` and `EXPECTED_TOTAL` in `scripts/validate-endpoints.mjs` |
+| Timeout errors | Slow upstream or cold start | Increase `--timeout-ms` (default 15000); retry once to rule out cold start |
+
+### Unit Tests
+
+The validation logic is covered by `tests/validate-endpoints.test.mjs` (network-independent, uses mock fetch):
+
+```bash
+# Run endpoint validator unit tests
+tsx --test tests/validate-endpoints.test.mjs
+
+# Or as part of the full test suite
+npm run test:data
+```
+
+---
+
 ## Tech Stack
 
 | Category              | Technologies                                                                                                                                   |
