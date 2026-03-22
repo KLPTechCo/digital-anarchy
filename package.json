@@ -52,7 +52,9 @@
     "desktop:package:macos:tech:sign": "node scripts/desktop-package.mjs --os macos --variant tech --sign",
     "desktop:package:windows:full:sign": "node scripts/desktop-package.mjs --os windows --variant full --sign",
     "desktop:package:windows:tech:sign": "node scripts/desktop-package.mjs --os windows --variant tech --sign",
-    "desktop:package": "node scripts/desktop-package.mjs"
+    "desktop:package": "node scripts/desktop-package.mjs",
+    "audit:lighthouse:preview": "node scripts/lighthouse-baseline.mjs",
+    "audit:lighthouse:url": "node scripts/lighthouse-baseline.mjs"
   },
   "devDependencies": {
     "@bufbuild/buf": "^1.66.0",
@@ -72,6 +74,7 @@
     "cross-env": "^10.1.0",
     "esbuild": "^0.27.3",
     "h3-js": "^4.4.0",
+    "lighthouse": "^12.0.0",
     "markdownlint-cli2": "^0.20.0",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
