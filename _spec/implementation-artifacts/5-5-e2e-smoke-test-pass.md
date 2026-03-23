@@ -25,6 +25,7 @@ So that I can confidently merge into `develop` and deploy to Preview.
 ## Scope Boundary
 
 This story covers:
+
 - Running the full Playwright E2E test suite
 - Running endpoint smoke tests against local dev
 - Cataloguing new E2E test files added by upstream
@@ -32,6 +33,7 @@ This story covers:
 - Documenting test results including any skipped or quarantined tests
 
 This story does NOT cover:
+
 - Build fixes (Story 5-2)
 - Fork branding visual verification (Story 5-4 — must be done first)
 - Merging into `develop` or deploying (Story 5-6)
@@ -83,6 +85,7 @@ This story does NOT cover:
 ### Expected E2E Test Areas (from Upstream)
 
 Based on the 648-commit gap, upstream likely added tests for:
+
 - New panels: Forecast, MCP, Sanctions, Radiation, Thermal
 - Map interactions: country hover, sea context menu, weather radar layers
 - Settings UI changes
@@ -93,6 +96,7 @@ Based on the 648-commit gap, upstream likely added tests for:
 ### Existing E2E Tests (Fork)
 
 Current `e2e/` directory contains tests for:
+
 - `circuit-breaker-persistence.spec.ts`
 - `deduct-situation.spec.ts`
 - `investments-panel.spec.ts`

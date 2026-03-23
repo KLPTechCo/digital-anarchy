@@ -84,12 +84,14 @@ The fork system is already operational from Epic 0 spike:
 There is **no standalone header bar component file** in the codebase. The header is rendered dynamically by the `App` class after `app.init()`. The fork's Tier 2 hook runs AFTER `app.init()`, so it can manipulate the rendered header DOM.
 
 **Implementation approach:**
+
 1. After `app.init()` resolves, the fork hook queries the header area (likely `.header` or similar selector — discover via DOM inspection at runtime)
 2. Insert or modify the brand text element within the header
 3. Apply `data-sm-component="attribution"` to the element
 4. Style using `color: var(--sm-accent)` (already defined in fork theme)
 
 **CLS-safe approach:** Since the Tier 2 hook runs after first paint, any header text insertion could cause CLS. Preferred mitigation strategies:
+
 - **Option A:** If upstream already has brand text in the header, just replace the text content (no layout shift — same element, different text)
 - **Option B:** If adding a new element, reserve space in the skeleton HTML so injection doesn't shift layout
 - **Option C:** Use `requestAnimationFrame` to batch the DOM change with the next paint frame
@@ -102,6 +104,7 @@ There is **no standalone header bar component file** in the codebase. The header
 ### Dependency: Story 2.1 (Fork Theme Injection & CSS Token System)
 
 Story 2.1 establishes the full `--sm-*` token system and `theme.css` file. Story 2.2's header branding depends on `--sm-accent` being available. **However**, the current `src/fork/index.ts` already injects `--sm-accent` via the spike implementation. If Story 2.1 has not been implemented yet when 2.2 starts:
+
 - The existing spike-level token injection is sufficient for header branding
 - Story 2.2 should use `SM_CONFIG.accent` from `config.ts` or `var(--sm-accent)` from the injected theme
 - When Story 2.1 later refactors to `theme.css`, the header branding will automatically pick up the new token values
@@ -153,6 +156,7 @@ Claude Opus 4.6
 ### File List
 
 Files to create/modify:
+
 - `src/fork/index.ts` — Add header branding injection function
 - `src/fork/branding.ts` — (optional) Separate branding module if scope warrants
 - `src/fork/__tests__/branding.test.mjs` — Unit tests for header branding
@@ -163,6 +167,7 @@ Files to create/modify:
 - `public/favico/*` — Verify/replace with SM-branded icons
 
 Files to reference (read-only):
+
 - `src/fork/config.ts` — SM_CONFIG values
 - `src/main.ts` — Tier 2 hook pattern reference
 - `index.html` — Already branded (verification only)

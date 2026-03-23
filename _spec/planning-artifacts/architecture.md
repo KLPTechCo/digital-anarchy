@@ -62,6 +62,7 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 
 **Non-Functional Requirements:**
 33 NFRs across 7 categories with priority markers (P0/P1/P2). The P0 requirements (verified on current deployment):
+
 - NFR7: OG image gen within 10s/128MB (Vercel Hobby tier)
 - NFR8–9: API key security (never in source, Vercel env vars only)
 - NFR12–13: TLS everywhere (Vercel HTTPS, Upstash TLS)
@@ -72,6 +73,7 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 - NFR33: Codegen determinism (make generate = byte-identical)
 
 **Scale & Complexity:**
+
 - Primary domain: Web SPA + Edge API (Vercel-hosted)
 - Complexity level: High
 - External integrations: 35+ data source APIs
@@ -80,6 +82,7 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 ### Technical Constraints & Dependencies
 
 **Hard Constraints (Vercel Hobby Tier):**
+
 - Serverless function timeout: 10 seconds
 - Serverless function memory: 128MB
 - Edge function execution: limited compute
@@ -87,11 +90,13 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 - Deployments: unlimited (Preview + Production)
 
 **Hard Constraints (Upstash Redis Free Tier):**
+
 - 10,000 commands/day (operational budget: 8,000)
 - 256MB storage
 - TLS-only connections
 
 **Inherited Architecture (Non-Negotiable):**
+
 - Framework-free TypeScript SPA (no React/Vue/Angular)
 - Proto-first sebuf RPC layer (all API changes go through .proto → codegen)
 - `buf breaking` enforces wire compatibility — proto schema evolution is constrained by CI. Breaking changes fail the pipeline.
@@ -100,19 +105,23 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 - AGPL-3.0 license (source must stay public)
 
 **Build-Time Variant Exclusion:**
+
 - `VITE_VARIANT=full` is the primary variant for the fork. Upstream ships 4 variants (full, tech, finance, happy) — all excluded at build time via Vite tree-shaking except the active one. Excluded variants produce zero runtime overhead — no code, no assets, no config. **[v2.5.8 UPDATE]** Happy variant added (positive news dashboard).
 - Three `tauri.*.conf.json` files exist for desktop builds — entirely dormant for web-only deployment.
 
 **Dormant Infrastructure:**
+
 - Convex (`convex/registerInterest.ts`, `convex/schema.ts`) exists in the codebase for email registration. Intentionally inactive for MVP — no Convex deployment, no mutation calls. Present in the repo, not in the architecture.
 - Railway AIS Relay (`scripts/ais-relay.cjs`) — WebSocket fanout for maritime vessel tracking. Excluded from MVP scope.
 
 **Solo Operator Implications:**
+
 - No team, no on-call rotation, no second pair of eyes. Every architectural decision must pass the "can Ed debug this alone at 7 AM with coffee?" test.
 - Favors: observable systems over complex ones, convention over configuration, inherited behavior over custom behavior, platform-managed infrastructure (Vercel, Upstash) over self-managed.
 - Operational complexity budget is near zero — if it can't be diagnosed from Vercel logs + Upstash dashboard, it's too complex.
 
 **Deployment Context (Live & Verified):**
+
 - Codebase is already deployed to Vercel and confirmed working
 - Git-based deployment (Vercel auto-deploys on merge to main)
 - GitHub Actions CI/CD as quality gate
@@ -120,6 +129,7 @@ Manual QA checklist?     → Verification Gap Register (Validation Results)
 - No staging environment, no blue-green, no canary
 
 **Test Infrastructure Constraints:**
+
 - Playwright E2E uses SwiftShader (software WebGL) in CI — deck.gl visual output cannot be accurately validated. New visual features are effectively untestable in automated CI.
 - 5 existing E2E specs cover map rendering, investments panel, keyword spike, mobile popup, runtime fetch — functional coverage, not visual fidelity.
 - Unit tests run via Node.js `node --test` — no Jest, no Vitest. Lightweight but limited mocking.
@@ -131,6 +141,7 @@ This is not a cross-cutting concern — it is THE fundamental resilience contrac
 **Request path:** Try preferred source → fall back to next tier → degrade visibly to user
 
 **Manifestations:**
+
 - **Data sources:** Each of 35+ APIs can fail independently. Panels show "not configured" or "unavailable" — never crash.
 - **AI pipeline:** Groq → OpenRouter → browser-side T5. Three layers before AI features go dark.
 - **Cache:** Redis unavailable → direct upstream call. Slower but functional (NFR26).
@@ -151,6 +162,7 @@ Browser → Edge Middleware → RPC Gateway → Router → Domain Handler → Ex
 ```
 
 **Components in execution order:**
+
 1. **SPA** (`src/`) — Client-side TypeScript, Web Workers for ML/analysis
 2. **Edge Middleware** (`middleware.ts`) — Bot blocking, UA filtering
 3. **RPC Gateway** (`api/[domain]/v1/[rpc].ts`) — CORS, API key validation, route dispatch
@@ -200,17 +212,20 @@ Fork is live on Vercel. All 57 endpoints functional. SPA loads and renders. The 
 **Architectural Decisions Inherited from Starter:**
 
 **Language & Runtime:**
+
 - TypeScript 5.x (strict mode), targeting ES2022
 - No framework — vanilla TypeScript with custom component lifecycle
 - Vite 6.x build tooling with variant-aware tree-shaking
 - Node.js runtime for serverless functions
 
 **Styling Solution:**
+
 - Plain CSS with CSS custom properties (no preprocessor, no CSS-in-JS)
 - Responsive breakpoints via media queries
 - Dark theme via CSS variables
 
 **Build Tooling:**
+
 - Vite for SPA bundling (dev server + production build)
 - `buf generate` for proto→TypeScript codegen (sebuf RPC layer)
 - `make generate` as canonical codegen entry point
@@ -224,6 +239,7 @@ proto/*.proto → buf generate → src/generated/ → server/ imports
 Any `.proto` file change requires regeneration, updates to generated TypeScript, and potential changes to server handlers that import from `src/generated/`. This is the highest-friction development workflow in the codebase — implementation stories involving proto changes must account for this multi-directory cascade.
 
 **Testing Framework:**
+
 - Node.js `node --test` for unit tests (no Jest, no Vitest)
 - Playwright for E2E (5 existing specs)
 - SwiftShader for headless WebGL in CI — **zero visual CI coverage for new features.** Any new map panel or deck.gl visualization is untestable in automated CI. Existing E2E specs test functional behavior (click → panel appears, data loads), not visual output. New visual features require manual QA in a browser.
@@ -231,6 +247,7 @@ Any `.proto` file change requires regeneration, updates to generated TypeScript,
 - **Test runtime bifurcation:** E2E runs in Chromium (Playwright), unit tests run in Node.js. No shared test utility layer. Mock infrastructure must be built separately for each runtime if needed.
 
 **Code Organization:**
+
 - `src/` — SPA (components, services, utils, workers, config, types)
 - `server/` — Backend handlers (20 domains, shared utilities)
 - `api/` — Vercel serverless entry points (RPC gateway + legacy REST)
@@ -238,11 +255,13 @@ Any `.proto` file change requires regeneration, updates to generated TypeScript,
 - `src-tauri/` — Desktop shell (dormant for web-only deployment)
 
 **Development Workflow Inherited:**
+
 - **Local dev is two-process:** Vite dev server (`make dev`) for SPA + `vercel dev` for API function emulation. Some legacy REST endpoints (`api/*.js`) behave differently under `vercel dev` than in production due to edge vs serverless runtime divergence.
 - **Make targets that matter:** `make generate` (codegen), `make dev` (local server), `make test` (unit tests), `make lint` (linting), `make build` (production build)
 - **CI pipeline:** GitHub Actions: lint → unit tests → buf breaking → build → Playwright E2E. Green = safe to merge.
 
 **Constraints Imposed by Starter:**
+
 1. No framework adoption possible — 62 components use custom lifecycle, not React/Vue/Angular patterns
 2. Proto schema changes require `buf breaking` pass — can't freely evolve APIs
 3. **[v2.5.8 UPDATE]** `App.ts` decomposed into `src/app/` modules — panel changes route through `panel-layout.ts` (930 LOC) and `event-handlers.ts` (731 LOC) rather than a single God Object
@@ -255,6 +274,7 @@ Any `.proto` file change requires regeneration, updates to generated TypeScript,
 Fork is deployed and verified working on Vercel. Upstream remote configured. CI/CD pipeline operational. This is not a future story — it's done.
 
 **Upstream Sync Strategy:**
+
 - Cadence: At least monthly (per PRD measurable outcomes)
 - Pattern: Dedicated `upstream-sync` branch → merge upstream → full test suite → PR into `main`
 - Conflict resolution: **[v2.5.8 UPDATE]** `src/app/panel-layout.ts` (930 LOC) and `src/app/data-loader.ts` (1,823 LOC) are the highest-risk merge surfaces. The former `App.ts` monolith has been decomposed — merge risk is now distributed across focused modules rather than concentrated in a single file.
@@ -271,6 +291,7 @@ Fork is deployed and verified working on Vercel. Upstream remote configured. CI/
 | **Low** | `App.ts` (thin shell), `public/`, `index.html`, branding assets | Shell is stable; fork-specific assets unlikely to conflict |
 
 **Upstream Sync Checklist:**
+
 - Verify `main.ts` diff — confirm the single-line fork hook is intact after merge
 - Run `make generate` — confirm codegen output matches
 - Check `package.json` — resolve Sentry dependency merge conflicts
@@ -281,15 +302,18 @@ Fork is deployed and verified working on Vercel. Upstream remote configured. CI/
 ### Decision Priority Analysis
 
 **Critical Decisions (Block Implementation):**
+
 - Fork customization pattern (hook tiers + `src/fork/` structure) — shapes all future code changes
 - Cache key strategy (prefixed client wrapper) — affects every Redis-touching endpoint
 
 **Important Decisions (Shape Architecture):**
+
 - Monitoring strategy (Sentry with noise filtering + correct env tagging)
 - Branding scope (visual identity boundary defined)
 - Fork pattern validation spike — proves the hook mechanism before committing
 
 **Deferred Decisions (Post-MVP):**
+
 - None. All 5 fork-specific decisions are resolved. Inherited decisions cover everything else.
 
 ### Inherited Decisions (Locked by Upstream)
@@ -371,6 +395,7 @@ This is a hard architectural constraint — direct Redis calls that bypass `pref
 Every fork story must declare its tier. Tier 3 changes require justification — "why can't this be Tier 1 or 2?"
 
 **The actual hook mechanism is TBD.** The spike story (implementation step 2) must discover and document which mechanism works:
+
 - DOM-ready callback (manipulate rendered DOM after init)
 - Global event bus (if upstream dispatches custom events like `app:ready`)
 - Direct import (override config/service values before `App` initializes)
@@ -432,6 +457,7 @@ Sentry.init({
 ```
 
 **Key details:**
+
 - Environment uses `VITE_VERCEL_ENV` — correctly distinguishes `preview` (QA) from `production`. Vite's `MODE` is always `production` on Vercel builds.
 - `beforeBreadcrumb` filters external API fetch noise — only captures same-origin breadcrumbs.
 - No DSN = Sentry silently disabled (graceful degradation pattern).
@@ -439,6 +465,7 @@ Sentry.init({
 ### Decision Impact Analysis
 
 **Implementation Sequence:**
+
 1. **Create `src/fork/` structure** + single-line `main.ts` hook → unblocks all fork work
 2. **Fork Pattern Validation Spike** — must answer three pass/fail questions:
    - Does the Tier 2 hook mechanism work? (Can `src/fork/index.ts` run code after app init?)
@@ -450,6 +477,7 @@ Sentry.init({
 5. **Add Sentry SDK** in `src/fork/monitoring.ts` (Tier 3 — `package.json` modification) → operational visibility
 
 **Cross-Component Dependencies:**
+
 - Step 1 unblocks step 2. Step 2 validates the pattern before steps 4 and 5 commit to it.
 - Step 3 (Redis) is independent — pure infrastructure config.
 - If spike (step 2) fails any gate, revise the fork pattern before proceeding.
@@ -514,6 +542,7 @@ These are discovered from the existing codebase. AI agents must match these exac
 | Fork tests | `src/fork/__tests__/` | Fork-layer unit tests |
 
 **API Format:**
+
 - sebuf RPC: Binary protobuf request/response. The proto schema IS the format.
 - Legacy REST (`api/*.js`): JSON responses, no consistent wrapper. Follow each endpoint's existing pattern.
 - Error responses: HTTP status codes + JSON `{ error: string }` body.
@@ -545,6 +574,7 @@ document.head.appendChild(style);
 Fork code (`src/fork/**`) must not import directly from `src/generated/**`. Import from `src/services/` or `src/types/` instead. This isolates fork code from proto schema changes — if upstream modifies proto definitions, the breakage is contained to the service layer (upstream code, fixed by the merge) rather than spreading into fork files.
 
 **Commit Message Convention:**
+
 - Fork changes: `[fork] add accent color branding override`
 - Upstream syncs: `[sync] merge upstream v2.5.6`
 - Enables `git log --grep='\[fork\]'` to instantly filter fork-specific history
@@ -621,6 +651,7 @@ try {
 
 **Graceful Degradation (Universal):**
 Every external call, every optional feature, every fork customization follows the same contract:
+
 1. Try the preferred path
 2. Catch failure
 3. Fall back to a working state (may be reduced functionality)
@@ -628,6 +659,7 @@ Every external call, every optional feature, every fork customization follows th
 5. Never crash, never hang, never show a blank screen
 
 **Loading & State:**
+
 - No global state management library. Components manage their own state.
 - Loading states use CSS classes (`.is-loading`, `.has-error`, `.is-empty`) — not JS-driven visibility toggles
 - Panels that await data show a skeleton/placeholder, not a spinner
@@ -655,6 +687,7 @@ import { applyBranding } from './fork/branding';
 ### Enforcement Guidelines
 
 **Hard Rules (Enforced by Lint/CI — build fails):**
+
 1. `make lint` — catches naming and TypeScript strict mode violations
 2. `buf breaking` — rejects proto schema breaking changes
 3. `make generate` — codegen must produce byte-identical output
@@ -662,6 +695,7 @@ import { applyBranding } from './fork/branding';
 5. `node --test` — unit test failures block merge
 
 **Conventions (Enforced by Review — best effort):**
+
 1. Declare fork tier (1/2/3) for changes touching upstream files
 2. Use `prefixedKey()` for all Redis operations
 3. Follow graceful degradation pattern for every external call
@@ -836,6 +870,7 @@ situation-monitor/
 ```
 
 **Notes:**
+
 - `server/_shared/redis.ts`: Exact upstream Redis utility path must be confirmed during implementation. The prefixedKey pattern applies wherever the Redis client is instantiated.
 - `settings.html` / `settings-main.ts`: Active upstream feature for user preferences. Not mapped to fork-specific FRs but part of the inherited product.
 
@@ -855,12 +890,14 @@ Client (SPA)  ─────┬─── sebuf RPC ──→  api/[domain]/v1/[
 - Fork REST boundary: Same as legacy, scoped to `api/fork/`
 
 **Component Boundaries:**
+
 - `App.ts` owns all panel lifecycle — components don't communicate directly with each other
 - Components → Services: components call service methods for data
 - Services → Generated types: services use generated protobuf types for RPC calls
 - Fork → App: fork hooks into app *after* initialization, can observe but shouldn't mutate internal state directly
 
 **Data Boundaries:**
+
 - **Redis** (`server/_shared/redis.ts`): All cache operations go through prefixed wrapper. No direct Redis client usage outside this module.
 - **External APIs**: Each domain handler owns its external API calls. No cross-domain direct API calls.
 - **Generated code** (`src/generated/`): Read-only boundary. Only `src/services/` and `server/` import from here. Fork code never imports directly.
@@ -968,17 +1005,21 @@ Growth stories should reference this table to place files correctly rather than 
 ### Development Workflow Integration
 
 **Local Development (Two-Process Model):**
+
 1. `make dev` — Vite dev server for SPA (HMR, instant reload)
 2. `vercel dev` — API function emulation (edge + serverless)
+
 - Note: Legacy REST endpoints may behave differently under `vercel dev` vs production (edge/serverless divergence)
 
 **Build Process:**
+
 1. `make generate` — proto → TypeScript codegen (`proto/` → `src/generated/`)
 2. `make lint` — ESLint + TypeScript checking
 3. `make build` — Vite production build (tree-shakes inactive variants)
 4. `vercel build` — Packages API functions for deployment
 
 **Deployment:**
+
 - Merge to `main` → Vercel auto-deploys to Production
 - PR/branch push → Vercel deploys to Preview (QA)
 - CI must pass before merge is allowed
@@ -1076,18 +1117,21 @@ FRs with architectural homes but no automated test path — require manual QA on
 ### Architecture Completeness Checklist
 
 **✅ Requirements Analysis**
+
 - [x] Project context analyzed (brownfield fork, deployed, verified)
 - [x] Scale and complexity assessed (High — 20 domains, 35+ APIs)
 - [x] Technical constraints identified (Vercel Hobby, Upstash Free, inherited arch)
 - [x] Cross-cutting concerns mapped (5 concerns + graceful degradation as core pattern)
 
 **✅ Architectural Decisions**
+
 - [x] Critical decisions documented (5 fork-specific + 13 inherited)
 - [x] Technology stack specified (inherited, no new selections)
 - [x] Integration patterns defined (API, component, data boundaries)
 - [x] Performance considerations addressed (free tier limits, 10s serverless budget)
 
 **✅ Implementation Patterns**
+
 - [x] Naming conventions established (matching upstream exactly)
 - [x] Structure patterns defined (fork files, endpoints, tests)
 - [x] Communication patterns specified (Redis via wrapper, errors via mapper)
@@ -1097,6 +1141,7 @@ FRs with architectural homes but no automated test path — require manual QA on
 - [x] Hard Rules vs Conventions distinction
 
 **✅ Project Structure**
+
 - [x] Complete directory structure with fork annotations
 - [x] Component boundaries established
 - [x] Integration points mapped (API pipeline + Web Worker pipeline)
@@ -1105,6 +1150,7 @@ FRs with architectural homes but no automated test path — require manual QA on
 - [x] Test organization for all code categories
 
 **✅ Validation**
+
 - [x] Coherence validation passed
 - [x] Requirements coverage verified (38/38 FRs, all P0 NFRs)
 - [x] Failure modes documented (6 scenarios)
@@ -1112,10 +1158,12 @@ FRs with architectural homes but no automated test path — require manual QA on
 - [x] Implementation readiness confirmed
 
 **Confidence Level:**
+
 - Inherited architecture: **HIGH** — deployed and verified working
 - Fork-specific decisions: **MEDIUM** — theoretically sound, pending spike validation
 
 **Areas for Future Enhancement:**
+
 - `eslint-plugin-import` for import order enforcement (Growth phase)
 - `App.ts` decomposition study if fork needs Tier 3 panel changes (Vision phase)
 - Automated upstream sync detection with GitHub Actions (Growth phase)
@@ -1123,6 +1171,7 @@ FRs with architectural homes but no automated test path — require manual QA on
 ### Implementation Handoff
 
 **AI Agent Guidelines:**
+
 - Follow all architectural decisions exactly as documented
 - Use the Quick Reference Card as the first-check decision tree
 - Declare fork tier (1/2/3) before starting any change

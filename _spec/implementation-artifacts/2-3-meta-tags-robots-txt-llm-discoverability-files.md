@@ -68,6 +68,7 @@ So that the correct product appears in search results and AI responses.
 ### Current State Analysis
 
 **`index.html` — ALREADY BRANDED (verify only):**
+
 - Title: "Situation Monitor - Real-Time Global Intelligence Dashboard" ✅
 - `og:site_name`: "Situation Monitor" ✅
 - `application-name`: "Situation Monitor" ✅
@@ -76,6 +77,7 @@ So that the correct product appears in search results and AI responses.
 - **REMAINING ISSUES:** `<link rel="canonical">` still points to `https://worldmonitor.app/`, CSP `frame-src` still references `worldmonitor.app` domains, og:url and twitter:url still reference `worldmonitor.app`
 
 **`settings.html` — NEEDS REBRANDING:**
+
 - Title: "World Monitor Settings" ❌ → change to "Situation Monitor Settings"
 - No `<meta name="description">` — add one
 - No `<meta name="application-name">` — add one
@@ -83,17 +85,20 @@ So that the correct product appears in search results and AI responses.
 - No `<meta name="robots">` — add `noindex, nofollow` (operator page, not public)
 
 **`live-channels.html` — NEEDS REBRANDING:**
+
 - Title: "Channel management - World Monitor" ❌ → "Channel Management - Situation Monitor"
 - No `<meta name="application-name">` — add one
 - No `<meta name="robots">` — add `noindex, nofollow` (operator page)
 
 **`public/robots.txt` — NEEDS REBRANDING:**
+
 - Currently references "WorldMonitor" in header comment ❌
 - Sitemap URL points to `worldmonitor.app` ❌
 - Social media bot rules are correct and must be preserved ✅
 - Missing AI bot user-agent rules (GPTBot, CCBot, anthropic-ai, Claude-Web) for FR36
 
 **`public/llms.txt` — NEEDS FULL REBRANDING:**
+
 - Header: "# World Monitor" ❌
 - Body text: multiple "World Monitor" references ❌
 - URLs: all point to `worldmonitor.app` ❌
@@ -101,6 +106,7 @@ So that the correct product appears in search results and AI responses.
 - Live Instances section references upstream domains ❌
 
 **`public/llms-full.txt` — NEEDS FULL REBRANDING:**
+
 - Same issues as `llms.txt` but more extensive (21KB file)
 - All "World Monitor" → "Situation Monitor"
 - All `worldmonitor.app` → fork domain
@@ -182,6 +188,7 @@ So that the correct product appears in search results and AI responses.
 ### Git Intelligence
 
 Recent commits show Epic 5 (Upstream Sync) work:
+
 - `478ce418` — Fork Hook Branding Validation (Story 5.4)
 - `37621176` — Env Var Audit Configuration (Story 5.3)
 

@@ -235,12 +235,14 @@ The platform's value is entirely dependent on 35+ external data sources. Managin
 | **No API key configured** | Any keyed source without a key | $0 | Graceful degradation — panel shows "data source not configured" rather than erroring |
 
 **Key Management Requirements:**
+
 - API keys stored as Vercel environment variables, scoped per environment (Preview vs Production)
 - No API keys in source code or committed to git (already enforced by upstream `.env.example` pattern)
 - Key rotation must be testable in QA before production promotion
 - Dashboard must degrade gracefully when any individual API key is missing, expired, or rate-limited
 
 **Cost Control Requirements:**
+
 - Start with free-tier keys only — do not configure paid APIs until usage patterns are understood
 - Upstash Redis free tier (10K commands/day) is the key cost boundary for AI caching — monitor daily command count
 - Groq free tier handles AI summarization — if exhausted, the summarization feature silently degrades (already has fallback chain: Groq → OpenRouter → browser-side T5)
@@ -274,6 +276,7 @@ Situation Monitor is a Single Page Application (SPA) built with Vite, rendering 
 | Older browsers | Any | Not supported — WebGL 2 + ES2020+ required |
 
 **Requirements:**
+
 - WebGL 2 support required (deck.gl, MapLibre GL JS)
 - ES2020+ module support required
 - No polyfills for legacy browsers — modern evergreen only
@@ -299,18 +302,21 @@ See [Non-Functional Requirements > Performance](#performance) for testable perfo
 SEO for a JavaScript SPA with WebGL rendering is inherently limited — search crawlers can't meaningfully index a dynamic globe. However, several strategies apply:
 
 **Already built (inherit from upstream):**
+
 - `public/llms.txt` and `public/llms-full.txt` — LLM discoverability (AI search engines like Perplexity, ChatGPT Search, Google AI Overviews)
 - `public/robots.txt` — crawler directives
 - OG meta tags via `/api/story` — social sharing generates rich previews
 - Semantic HTML in `index.html` — title, description, meta tags
 
 **MVP (low effort, high impact):**
+
 - Update `index.html` meta tags to reflect Situation Monitor branding (not upstream World Monitor)
 - **Update `llms.txt` and `llms-full.txt` with Situation Monitor branding** — these are SEO for AI search engines and should reflect the fork identity
 - Verify `robots.txt` allows crawling of public pages
 - Social sharing pipeline is the primary organic discovery channel — optimize OG cards
 
 **Growth (post-MVP):**
+
 - **Generate sitemap.xml from the country list using story URLs** (`/api/story?c=US`, `/api/story?c=UA`, etc.) — these serve HTML to crawlers and are indexable
 - **Enhance `/api/story` to serve crawler-friendly HTML with substantive content per country** — country name, instability index, key events, "View live dashboard" CTA. ~195 countries × multiple analysis types = hundreds of indexable pages, all from existing data pipelines
 - Server-side rendered landing page with project description, feature highlights, and live data snapshot
@@ -319,6 +325,7 @@ SEO for a JavaScript SPA with WebGL rendering is inherently limited — search c
 - Submit sitemap to Google Search Console
 
 **Future:**
+
 - Dynamic country/topic pages with SSR ("/countries/taiwan" → pre-rendered intelligence summary)
 - These would dramatically improve search presence but require architectural work
 
@@ -327,6 +334,7 @@ SEO for a JavaScript SPA with WebGL rendering is inherently limited — search c
 Accessibility is a long-term commitment, approached progressively given the WebGL-heavy interface.
 
 **V1 — Baseline (inherit + verify):**
+
 - Ensure all interactive elements in panels have keyboard focus support
 - **Verify tab order in panels** — Tab should move logically through panel controls, headers, data sections. Fix any random tab-order jumps.
 - **Verify focus indicators are visible** — dark-themed dashboards often strip focus rings for aesthetics. Ensure they're visible when tabbing through controls.
@@ -335,6 +343,7 @@ Accessibility is a long-term commitment, approached progressively given the WebG
 - Alt text on generated OG images (already has descriptive meta tags)
 
 **Growth — Incremental improvements:**
+
 - ARIA labels on all panel controls and navigation elements
 - Keyboard navigation for panel switching and data exploration
 - Skip-to-content links for panel navigation
@@ -343,6 +352,7 @@ Accessibility is a long-term commitment, approached progressively given the WebG
 - **Color-only meaning in globe clusters** — the globe uses red/orange/green clustering. Add shape differentiation (circles vs triangles vs squares) or pattern fills so meaning doesn't depend solely on color.
 
 **Future — WCAG 2.1 AA target:**
+
 - Alternative text-based view for core data (non-globe fallback for screen readers)
 - Full keyboard navigation including map interaction alternatives
 - Audit against WCAG 2.1 AA checklist
@@ -359,6 +369,7 @@ Accessibility is a long-term commitment, approached progressively given the WebG
 ### MVP Feature Set (Phase 1)
 
 **Core User Journeys Supported:**
+
 - Ed (Daily Briefing & Operational Stewardship) — full journey
 - Rachel (Prediction Market Edge-Seeker) — full journey (data already built)
 - Marcus (Casual Visitor) — full journey via deep-link sharing

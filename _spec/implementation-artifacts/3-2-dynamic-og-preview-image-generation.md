@@ -91,12 +91,14 @@ Similarly, `api/story.js` references "World Monitor" in `og:site_name` and page 
 The current implementation at `api/og-story.js` uses **native SVG generation** (string template), NOT `@vercel/og` or `satori`. This is intentional — it's lightweight, fast, and stays within Vercel Hobby tier limits. **Do NOT introduce @vercel/og or satori.** The SVG approach works and is already in production.
 
 **Current image specs:**
+
 - Format: SVG (`image/svg+xml`)
 - Dimensions: 1200×630 (standard OG card size)
 - Cache-Control: `public, max-age=3600, s-maxage=3600, stale-while-revalidate=600`
 - Query params: `c` (country code), `t` (analysis type), `s` (score 0-100), `l` (level: critical/high/elevated/normal/low)
 
 **Design elements already implemented:**
+
 - Dark gradient background (`#0c0c18` → `#0a0a12`)
 - Color-coded threat levels (critical=#ef4444, high=#f97316, elevated=#eab308, normal=#22c55e, low=#3b82f6)
 - Left accent sidebar with level gradient
@@ -115,6 +117,7 @@ Use the Upstash Redis REST pattern from `server/_shared/redis.ts`. Since `og-sto
 **Important:** The Redis client uses environment-based key prefixes (`prefixKey()`). Production gets no prefix; preview gets `preview:{sha}:`. The OG image cache key should go through this prefix system.
 
 **Cache strategy:**
+
 - Cache key: `og:img:{c}:{l}:{s}` (e.g., `og:img:US:critical:88`)
 - TTL: 3600s (1 hour) — matches existing `Cache-Control` max-age
 - On Redis miss: generate SVG, cache it, return
@@ -125,6 +128,7 @@ Use the Upstash Redis REST pattern from `server/_shared/redis.ts`. Since `og-sto
 ### Bot Detection & Request Flow
 
 The middleware (`middleware.ts`) already handles bot routing:
+
 1. Social bots (twitterbot, facebookexternalhit, linkedinbot, etc.) are **whitelisted** for `/api/og-story`
 2. Generic crawlers/scrapers are **blocked** with 403
 3. The `SOCIAL_PREVIEW_PATHS` set includes `/api/og-story`
@@ -151,6 +155,7 @@ The current `COUNTRY_NAMES` dictionary in `api/og-story.js` only has 20 entries.
 ### UX Requirements
 
 From UX Design Specification:
+
 - OG card must be "compelling at thumbnail size" — threat badge, country, branding readable
 - OG card palette tokens: `--sm-og-bg`, `--sm-og-accent` (CSS design tokens for consistency)
 - The social share preview is described as the "primary organic growth channel"

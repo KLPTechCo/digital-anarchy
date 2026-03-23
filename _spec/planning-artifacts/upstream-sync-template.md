@@ -110,6 +110,7 @@ git merge upstream/main
 ```
 
 **Critical checkpoints:**
+
 - `src/main.ts` — fork hook import (`src/fork/index`) must survive (ARCH-37)
 - `package.json` — keep fork deps, accept upstream additions
 - `vite.config.ts` — merge upstream changes (e.g., dynamic env loading)
@@ -157,6 +158,7 @@ make dev           # start dev server
 ```
 
 Verify manually:
+
 - Fork hook executes (no `[fork] ...` console warnings)
 - Situation Monitor branding: page title, meta tags, favicon
 - New panels inherit `--sm-*` CSS tokens (spot check ≥5 new panels)

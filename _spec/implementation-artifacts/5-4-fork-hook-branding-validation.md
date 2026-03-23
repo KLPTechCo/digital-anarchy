@@ -30,6 +30,7 @@ So that the Situation Monitor identity and fork behavior are preserved.
 ## Scope Boundary
 
 This story covers:
+
 - Starting the dev server and verifying the fork hook executes cleanly
 - Verifying Situation Monitor branding: page title, meta tags, OG metadata, favicon
 - Spot-checking new upstream panels for CSS token compliance with fork `--sm-*` design tokens
@@ -38,6 +39,7 @@ This story covers:
 - Fixing any fork regressions found during validation
 
 This story does NOT cover:
+
 - Build/lint fixes (Story 5-2 — must be done first)
 - Env var setup for new panels to show live data (Story 5-3)
 - E2E test execution (Story 5-5)

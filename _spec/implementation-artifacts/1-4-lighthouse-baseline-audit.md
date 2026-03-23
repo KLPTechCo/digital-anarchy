@@ -21,12 +21,14 @@ So that I have a reference point for detecting future performance regressions.
 ## Scope Boundary
 
 This story covers:
+
 - Adding a reproducible Lighthouse baseline script for the deployed Preview URL
 - Producing category scores for Performance, Accessibility, Best Practices, and SEO
 - Storing baseline output in a trackable JSON format in-repo
 - Documenting how to rerun the same baseline process later for comparison
 
 This story does NOT cover:
+
 - Converting Lighthouse into a merge-blocking CI quality gate (Story 10.4)
 - Defining budget thresholds that fail builds
 - Production promotion validation (Story 1.5)
@@ -99,6 +101,7 @@ npx lighthouse "$TARGET_URL" \
 ```
 
 Implementation guidance:
+
 - Keep script runtime-only and deterministic; avoid hidden defaults.
 - Store raw report JSON/HTML per run and also produce one concise summary JSON for the story deliverable.
 - Record tool versions in the summary file (`lighthouseVersion`, `chromeVersion`) to make future comparisons fair.

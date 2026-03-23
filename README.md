@@ -2003,6 +2003,7 @@ scripts/validate-endpoints.sh --base-url https://your-preview.vercel.app \
 ```
 
 In degraded mode:
+
 - **Affected domain** endpoints must return a non-500 response whose body contains at least one graceful degradation signal (`"not configured"`, `"unavailable"`, `"skipReason"`, etc.) — these show as `↓ DEGRADED_PASS`.
 - **All other domains** must continue to pass normally — regressions are highlighted separately.
 
@@ -2052,6 +2053,89 @@ tsx --test tests/validate-endpoints.test.mjs
 # Or as part of the full test suite
 npm run test:data
 ```
+
+---
+
+## Lighthouse Baseline Audit
+
+`scripts/lighthouse-baseline.mjs` runs Lighthouse 3 times against a deployed Preview URL, records median category scores (Performance, Accessibility, Best Practices, SEO), and writes per-run JSON/HTML artifacts plus a concise summary JSON to `_spec/implementation-artifacts/lighthouse-baselines/`.
+
+Running multiple passes and taking the median reduces single-run noise, giving a stable reference baseline for future regression comparisons.
+
+### Quick Usage
+
+```bash
+# Audit a Vercel Preview deployment (URL as argument)
+node scripts/lighthouse-baseline.mjs https://your-preview.vercel.app
+
+# Or set PREVIEW_URL and use the npm script
+PREVIEW_URL=https://your-preview.vercel.app npm run audit:lighthouse:preview
+
+# Explicit URL via npm script
+npm run audit:lighthouse:url -- https://your-preview.vercel.app
+```
+
+The script fails immediately with a clear message if no URL is provided.
+
+### Output Artifacts
+
+After a run, the following files are written to `_spec/implementation-artifacts/lighthouse-baselines/`:
+
+```
+_spec/implementation-artifacts/lighthouse-baselines/
+  YYYY-MM-DD-preview-baseline.summary.json   ← commit this to source control
+  YYYY-MM-DD-preview-run-1.report.json
+  YYYY-MM-DD-preview-run-1.report.html
+  YYYY-MM-DD-preview-run-2.report.json
+  YYYY-MM-DD-preview-run-2.report.html
+  YYYY-MM-DD-preview-run-3.report.json
+  YYYY-MM-DD-preview-run-3.report.html
+```
+
+The `*.summary.json` file contains:
+
+| Field | Description |
+|-------|-------------|
+| `previewUrl` | URL that was audited |
+| `auditedAt` | ISO 8601 timestamp of the audit session |
+| `lighthouseVersion` | Lighthouse version used |
+| `userAgent` | Chrome user-agent string |
+| `medianScores` | Median `raw` (0–1) and `score` (0–100) per category |
+| `perRunScores` | Per-run scores for all three passes |
+| `artifacts` | Relative paths to per-run JSON/HTML reports |
+
+### Rerunning for Regression Comparison
+
+To check for regressions after a significant change:
+
+1. **Deploy** your change to the Preview environment.
+2. **Wait** for the deployment to be live (~1–2 minutes on Vercel).
+3. **Run the audit** and commit the new summary:
+
+```bash
+PREVIEW_URL=https://your-preview.vercel.app npm run audit:lighthouse:preview
+git add _spec/implementation-artifacts/lighthouse-baselines/
+git commit -m "chore: update Lighthouse baseline after <change description>"
+```
+
+4. **Compare** the new `medianScores` with the previous `*.summary.json` to spot regressions.
+
+Previous baselines are never overwritten (files are date-stamped), so the full audit history is preserved in source control.
+
+### Prerequisites
+
+- **Chrome or Chromium** must be installed and on `PATH`. Lighthouse uses Headless Chrome.
+- **Node.js 22+** (matches CI environment).
+- `lighthouse` is a project devDependency — run `npm install` once after checkout.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `ERROR: No target URL provided` | No URL argument and `PREVIEW_URL` not set | Pass URL as argument or export `PREVIEW_URL` |
+| `ERROR: Lighthouse run N exited with code 1` | Chrome not found or URL unreachable | Install Chrome; verify the Preview URL is live |
+| Scores vary widely between runs | Cold-start latency, network jitter | Scores are already medians of 3 runs; re-run during off-peak hours |
+| `ERROR: Expected JSON report not found` | Lighthouse version mismatch or `--output-path` issue | Ensure `lighthouse@^12` is installed (`npm install`) |
 
 ---
 

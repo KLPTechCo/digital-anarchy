@@ -279,6 +279,7 @@ Panel order = object key insertion order. No explicit `order` field, no injectio
 ### What to Document After Spike
 
 Update `_spec/planning-artifacts/architecture.md` with:
+
 1. Hook mechanism chosen and rationale
 2. CSS coverage audit results (10 components, dark + light mode)
 3. Module hook targets — especially panel ordering tier conclusion
@@ -339,6 +340,7 @@ No errors encountered during implementation.
 #### Hook Mechanism
 
 **Chosen: Dynamic `import()` inside `.then()` callback.** Rationale:
+
 - Ensures app is fully initialized before fork code runs
 - Fork failure cannot prevent app loading (graceful degradation)
 - Single line of upstream modification (Tier 2 compliant)
@@ -347,11 +349,13 @@ No errors encountered during implementation.
 #### CSS Coverage Audit
 
 **Responds to `--accent` override (20+ components across 3 categories):**
+
 - **Panels (8):** SatelliteFiresPanel, PopulationExposurePanel, DisplacementPanel, GivingPanel, CIIPanel, Panel base (resize handles, spinners, summaries, tooltips), StatusPanel/Header, PlaybackPanel
 - **Modals (5):** SignalModal (heavily dependent — header, borders, tags), StoryModal, CountryIntelModal, MobileWarningModal, SearchModal (indirect via surface vars)
 - **Map/Globe (7):** PizzIntIndicator, MapLayerControls, CloudRegionMarkers, MapPopups, GDELTIntelPanel, PipelineHighlights, RiskAssessmentUI
 
 **Does NOT respond (hardcoded colors — 12 components):**
+
 - PizzIntIndicator (DEFCON severity colors — intentionally fixed)
 - InvestmentsPanel (status colors — domain-specific palette)
 - VerificationChecklist (verdict colors)
@@ -370,6 +374,7 @@ No errors encountered during implementation.
 #### Module Hook Evaluation
 
 **panel-layout.ts — SURPRISE: Tier 2 IS feasible**
+
 - `DEFAULT_PANELS` is a mutable `Record<string, PanelConfig>` — no `Object.freeze()`, no `as const`
 - Fork code gets the same object reference via ES module live binding
 - Property mutations (add/remove/change panels) made before `PanelLayoutManager.init()` will be respected
@@ -378,6 +383,7 @@ No errors encountered during implementation.
 - **Conclusion: Panel add/remove/enable/disable is Tier 2. Panel reordering requires localStorage pre-seeding or delete-reinsert pattern.**
 
 **event-handlers.ts — Tier 2 fully feasible**
+
 - Only one `stopPropagation()` call — desktop-only external link handler (capture phase, inactive on web)
 - All other handlers use standard bubbling
 - Two custom events available: `focal-points-ready` and `theme-changed` on `window`
