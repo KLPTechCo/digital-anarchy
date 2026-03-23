@@ -93,6 +93,7 @@ The OG meta tag pipeline is **already implemented in upstream World Monitor**. T
 ### What This Story Actually Requires
 
 This story is primarily a **Tier 2 branding patch** on existing functional infrastructure:
+
 - The bot detection logic works correctly
 - The OG pipeline works correctly
 - The deep-link redirect works correctly
@@ -166,8 +167,6 @@ This story is primarily a **Tier 2 branding patch** on existing functional infra
 ## Dev Agent Record
 
 ### Agent Model Used
-
-
 
 ### Debug Log References
 

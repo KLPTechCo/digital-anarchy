@@ -130,6 +130,7 @@ overallStatus: WARNING
 ### Orphan Elements
 
 **Orphan Functional Requirements:** 2
+
 - **FR36** (LLM discoverability files) — no journey covers AI search engine discovery
 - **FR38** (robots.txt) — Journey 4 covers social bots but not general search crawlers
 

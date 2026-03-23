@@ -38,6 +38,7 @@ So that broken code never reaches production.
 ## Scope Boundary
 
 This story covers:
+
 - Creating a unified `.github/workflows/ci.yml` GitHub Actions workflow
 - Wiring existing Makefile targets (`make generate`, `make lint`, `make breaking`) into CI
 - Wiring existing npm test scripts (`test:data`, `test:sidecar`, `test:fork`) into CI
@@ -49,6 +50,7 @@ This story covers:
 - Ensuring the pipeline blocks PR merge on any failure
 
 This story does NOT cover:
+
 - Lighthouse CI integration (Story 1.4)
 - Endpoint smoke tests (Story 1.3)
 - Production deploy verification (Story 1.5)
@@ -302,6 +304,7 @@ jobs:
 ### Previous Story Intelligence (Story 1.1)
 
 **Relevant learnings:**
+
 - Test pattern established: `npx tsx --test` for `.test.mjs` files importing `.ts` sources
 - Assertion style: `import { describe, it } from 'node:test'; import assert from 'node:assert/strict';`
 - `tsc --noEmit` must pass — strict mode is enforced, `noUnusedLocals: true`, `noUnusedParameters: true`

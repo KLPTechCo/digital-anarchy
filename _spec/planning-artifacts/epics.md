@@ -109,6 +109,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 #### From Architecture
 
 **Infrastructure / Deployment Constraints:**
+
 - ARCH-1: Vercel Hobby Tier imposes 100GB/month bandwidth limit — all architectural decisions must account for this ceiling
 - ARCH-2: Upstash Redis Free Tier imposes 256MB storage limit alongside the command quota
 - ARCH-3: Dual runtime model: Edge Functions (middleware, RPC gateway) and Serverless Functions (legacy API, OG image) have different timeout limits, memory models, and execution constraints — code must target the correct runtime
@@ -119,6 +120,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-8: Build process is a strict 4-step pipeline: `make generate` → `make lint` → `make build` → `vercel build`
 
 **Fork Hook Tier System:**
+
 - ARCH-9: Every fork story MUST declare its tier (1/2/3) before implementation; Tier 3 changes require explicit justification
 - ARCH-10: Tier 1 (Zero-touch): CSS custom property overrides, `<meta>` tags, favicon swap, static asset replacement
 - ARCH-11: Tier 2 (Single-line hook): One import added to `main.ts` that runs after app init; all logic lives in `src/fork/`
@@ -127,6 +129,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-14: Sentry SDK addition is Tier 3 (modifies `package.json`, creating permanent merge debt)
 
 **Fork Directory Structure & Code Isolation:**
+
 - ARCH-15: Fork client code lives exclusively in `src/fork/` with defined files: `index.ts`, `branding.ts`, `monitoring.ts`, `config.ts`, and `__tests__/`
 - ARCH-16: Fork-specific server endpoints go in `api/fork/` as legacy REST `.js` files — never create new proto domains for fork features
 - ARCH-17: Fork E2E tests go in `e2e/fork/` — created as needed, not speculatively
@@ -136,6 +139,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-21: Fork testing contract: all code in `src/fork/` requires unit tests in `src/fork/__tests__/` using `node --test`
 
 **Implementation Patterns & Conventions:**
+
 - ARCH-22: Fork branding uses `<style id="fork-theme">` block injected into `<head>` with `:root` overrides — `document.documentElement.style.setProperty()` is forbidden
 - ARCH-23: Fork branding must not cause Cumulative Layout Shift > 0; DOM additions must be present in initial HTML or injected before first paint
 - ARCH-24: Fork changes use `[fork] description` commit prefix; upstream syncs use `[sync] merge upstream vX.Y.Z`
@@ -145,6 +149,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-28: Components use CSS classes (`.is-loading`, `.has-error`, `.is-empty`) not JS-driven visibility toggles; panels show skeleton/placeholder, not spinners
 
 **Data Architecture Patterns:**
+
 - ARCH-29: Redis key prefix (`qa:` / `prod:`) is enforced at the client wrapper level via `prefixedKey()` — direct Redis calls bypassing the wrapper are forbidden
 - ARCH-30: A careless `FLUSHDB` nukes both environments — mitigated by never using `FLUSHDB`; use prefix-scoped `SCAN` + `DEL` instead
 - ARCH-31: Date/time encoding: ISO 8601 strings in JSON responses, Unix timestamps in proto messages
@@ -152,6 +157,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-33: Three-tier cache hierarchy (in-memory → Redis → upstream) with QA/Prod isolation is the canonical caching pattern
 
 **Upstream Sync Workflow:**
+
 - ARCH-34: Upstream sync pattern: dedicated `upstream-sync` branch → merge upstream → full test suite → PR into `main`
 - ARCH-35: ~~`App.ts` was a 4,629 LOC God Object~~ **[v2.5.8 UPDATE]** Upstream decomposed `App.ts` into a 498 LOC shell + 8 modules in `src/app/` (data-loader 1,823 LOC, panel-layout 930 LOC, event-handlers 731 LOC, country-intel 530 LOC, search-manager 552 LOC, app-context 108 LOC, refresh-scheduler 108 LOC, desktop-updater 205 LOC). Fork hooks can now target specific modules rather than instrumenting a monolith. Merge risk is significantly reduced.
 - ARCH-36: Merge Risk Map **[v2.5.8 UPDATE]**: Critical = `src/app/panel-layout.ts`, `src/app/data-loader.ts`; High = `proto/**`, `src/generated/**`, `src/app/event-handlers.ts`; Medium = domain handlers, `package.json`, other `src/app/` modules; Low = `App.ts` (now thin shell), `public/`, `index.html`
@@ -160,6 +166,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-39: Codegen dependency chain: `.proto` change → `buf generate` → `src/generated/` → `server/` imports; proto changes cascade across four directories
 
 **Monitoring / Observability:**
+
 - ARCH-40: Sentry free tier (5K errors/month) for client-side error tracking — surfaces crashes invisible to Vercel logs
 - ARCH-41: Sentry environment tagging MUST use `VITE_VERCEL_ENV` (not Vite `MODE`)
 - ARCH-42: Sentry `beforeBreadcrumb` filters external API fetch noise — only same-origin breadcrumbs captured
@@ -168,17 +175,20 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-45: Solo operator observability constraint: if it can't be diagnosed from Vercel logs + Upstash dashboard + Sentry, it's too complex
 
 **Testing & Verification Gaps:**
+
 - ARCH-46: SwiftShader (software WebGL) in CI means visual features are effectively untestable in automated CI — require manual QA
 - ARCH-47: Test runtime bifurcation: E2E in Chromium (Playwright), unit tests in Node.js — no shared test utility layer
 - ARCH-48: 6 of 38 FRs (FR12–FR16, FR35) require manual QA — all visual/UX requirements with zero automated CI coverage
 - ARCH-49: `buf breaking` is the ONLY automated API contract validation in the pipeline
 
 **Spike & Validation Requirements:**
+
 - ARCH-50: Fork Pattern Validation Spike must answer 3 pass/fail gates: (1) Does the Tier 2 hook mechanism work? (2) Do CSS variable changes propagate to all components? (3) Does it deploy cleanly to Vercel Preview?
 - ARCH-51: Spike must also discover: actual hook mechanism and CSS variable coverage audit — results documented back into architecture doc
 - ARCH-52: If spike fails any gate, revise the fork pattern before proceeding
 
 **Growth-Phase Expansion (Architectural Pre-Mapping):**
+
 - ARCH-53: Sitemap.xml generation → `api/fork/sitemap.js` (Tier 2)
 - ARCH-54: Enhanced `/api/story` for crawler pages → modify upstream `api/story.js` (Tier 3)
 - ARCH-55: SSR landing page → `api/fork/landing.js` + `public/landing.html` (Tier 2)
@@ -187,12 +197,14 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - ARCH-58: Automated upstream sync detection → new `.github/workflows/upstream-sync.yml` (Tier 2)
 
 **Architectural Modularity (formerly God Object Risk):**
+
 - ARCH-59: **[v2.5.8 UPDATE]** `App.ts` has been decomposed into `src/app/` modules. Component lifecycle is managed by `panel-layout.ts` (930 LOC), event routing by `event-handlers.ts` (731 LOC), and data management by `data-loader.ts` (1,823 LOC). Fork customizations can target specific modules — the monolithic bottleneck no longer exists.
 - ARCH-60: **[v2.5.8 UPDATE]** Panel behavior now routes through `src/app/panel-layout.ts` and `src/app/event-handlers.ts` rather than a single `App.ts` God Object. Fork hooks should still observe but not mutate internal state — but can now hook at module boundaries (e.g., panel ordering in `panel-layout.ts`).
 
 #### From UX Design
 
 **Interaction Flow Requirements:**
+
 - UX-REQ-1: Scan → Drill → Correlate three-phase loop; all three drill entry points (globe click, deep-link URL, ⌘K search) must produce identical panel activation results
 - UX-REQ-2: Scan Depth Tiers — Glance (5s), Read (15–30s), Study (1–2min) without mode switching; each tier has exit ramp
 - UX-REQ-3: Deep-Link Animation Skip — When `?c=` URL param is present, bypass ~800ms globe spin and snap to country view (~30 LOC, Tier 2 patch)
@@ -200,12 +212,14 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-5: Rate-Limit Burst Handling on Shared Links — 1000+ simultaneous clicks serve cached/degraded version silently
 
 **Data State Handling Requirements:**
+
 - UX-REQ-6: Eight Panel Data States — Loading/Loaded/Stale(aging)/Stale(critical)/Error(transient)/Error(persistent)/Empty/Degraded with specific visual treatments per state
 - UX-REQ-7: Never Show Blank Panel — panels always display skeleton → content → stale content → empty state
 - UX-REQ-8: Never Hide Stale Data — stale data with timestamp is always preferred over loading spinner; stale-while-revalidate throughout
 - UX-REQ-9: Per-Panel Independence — one panel's failure never affects another panel; no global error overlays for single-source failures
 
 **Data Age Gradient & Freshness Requirements:**
+
 - UX-REQ-10: Data Age Gradient via CSS saturation filter; `data-freshness` attribute (`fresh`|`aging`|`stale`) drives `saturate()` CSS filter (~10 LOC)
 - UX-REQ-11: CSS Transition on Freshness State Changes — `transition: filter 2s ease`; disabled under `prefers-reduced-motion`
 - UX-REQ-12: Per-Data-Source Freshness Thresholds — configurable per source type (earthquakes: 10min/30min, predictions: 1h/3h, news: 15min/1h, etc.)
@@ -213,6 +227,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-14: Stale Data Warning Bars — hidden if <24h, amber at 24h–72h, red at >72h; always visible to all users (~80 LOC)
 
 **Accessibility Requirements (Beyond WCAG AA):**
+
 - UX-REQ-15: `AriaAnnouncer.ts` — single `aria-live="polite"` region with 2-second debounce batching panel state changes (~30 LOC)
 - UX-REQ-16: OperatorDrawer Focus Trap — focus moves to first element, Tab cycles within drawer, Escape restores focus to badge
 - UX-REQ-17: `prefers-reduced-motion` blanket rule for all fork animations via `[data-sm-component]` selector (~3 LOC)
@@ -221,6 +236,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-20: Color Blindness text labels alongside traffic-light signals; no color-only information signaling
 
 **Responsive & Mobile-Specific Requirements:**
+
 - UX-REQ-21: OperatorDrawer full viewport width below 768px breakpoint
 - UX-REQ-22: Touch Targets ≥ 44×44px for all interactive fork elements on mobile
 - UX-REQ-23: 320px minimum viewport width support
@@ -228,12 +244,14 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-25: `HotspotDelta` SVG equivalent on mobile for DeckGL/D3 SVG fallback (Growth phase)
 
 **Animation & Transition Specifications:**
+
 - UX-REQ-26: Interaction speed targets: theme injection <200ms, globe render <2s, panel skeleton→content <3s, deep-link snap <1s, search modal <100ms, panel collapse/expand <200ms, panel drag 60fps, globe fly-to ~800ms, modal overlay <100ms
 - UX-REQ-27: Skeleton Loader Only — no spinners; skeleton indicates shape of incoming content
 - UX-REQ-28: Panel Header Renders Immediately — only body shows skeleton animation
 - UX-REQ-29: Hotspot Delta Pulse Timing — 10s pulse then static teal ring; disabled under `prefers-reduced-motion` (Growth phase)
 
 **Design System Token & Convention Requirements:**
+
 - UX-REQ-30: `--sm-*` namespace enforcement — no hardcoded hex values; CI grep check
 - UX-REQ-31: Accent Restraint Rule — `--sm-accent` for identity only (header brand mark, active state, hotspot emphasis, share CTA); prohibited for panel headers, body text links, data values
 - UX-REQ-32: `data-sm-*` DOM attribute convention for all fork elements; no new DOM IDs from fork code
@@ -244,10 +262,12 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-37: FOUC Prevention — CSS tokens inlined as template literal in `theme-inject.ts`; no external CSS file load
 
 **Performance Instrumentation Requirements:**
+
 - UX-REQ-38: `performance.mark()` at fork lifecycle points: `sm-theme-injected`, `sm-globe-rendered`, `sm-panels-loaded`, `sm-deep-link-resolved` (~15 LOC)
 - UX-REQ-39: Branding Injection < 200ms assertion via Playwright Performance API
 
 **Testing Requirements (UX-Specific):**
+
 - UX-REQ-40: Playwright Visual A11y Tests — `@axe-core/playwright` in `e2e/accessibility.spec.ts` (~30 LOC)
 - UX-REQ-41: OperatorDrawer Focus Trap Test — dedicated test
 - UX-REQ-42: Tier 2 Patch Signature Assertions — `console.assert` verifying original method exists with expected arity; tested in companion `*.test.ts`
@@ -256,9 +276,11 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-45: Post-Upstream-Sync Visual Verification < 2 Minutes — Playwright screenshot comparison of 3 key views + DOM assertions
 
 **Pattern Adoption Checklist:**
+
 - UX-REQ-46: PR Checklist for Fork Components — 18-point checklist including token usage, accent restraint, skeleton loaders, stale data preservation, ARIA labels, touch targets, reduced motion, and focus trap testing
 
 **Component-Level UX Behaviors:**
+
 - UX-REQ-47: `HealthIndicator` — 8px colored dots in panel headers for data source freshness; operator-gated (~120 LOC)
 - UX-REQ-48: `OperatorBadge` + `OperatorDrawer` split architecture — badge always rendered, drawer lazy-loads on click
 - UX-REQ-49: Startup Compatibility Notification — dismissible amber bar when Tier 2 monkey-patch signature assertion fires; operator-only, once per session
@@ -274,6 +296,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 - UX-REQ-59: Overwhelming Globe Prevention — severity weighting must create visual contrast hierarchy
 
 **Growth-Phase UX Requirements:**
+
 - UX-REQ-60: Hotspot Delta Detection — pulsing teal ring around new/escalated markers; delta from localStorage via `VisitTracker.ts` (~150 LOC)
 - UX-REQ-61: "What You Missed" Panel — collapsible card at top of InsightsPanel for returning visitors (~180 LOC)
 - UX-REQ-62: `VisitTracker.ts` Service — localStorage-based visit tracking with versioned schema (~120 LOC)
@@ -349,6 +372,7 @@ NFR33: Running `make generate` on a clean checkout produces byte-identical outpu
 **Goal:** Validate the fork architecture works before committing to implementation.
 
 **Three pass/fail gates:**
+
 1. Does the Tier 2 hook mechanism work? (DOM-ready callback / event bus / direct import — discover which)
 2. Do CSS variable changes propagate to ALL 52 components, or are some hardcoded?
 3. Does it deploy cleanly to Vercel Preview?
@@ -1071,6 +1095,7 @@ So that the interface respects my OS accessibility preference.
 **Given** a fork interactive element renders
 **When** it is inspected for accessibility
 **Then** it has an `aria-label` appropriate to its role (UX-REQ-18):
+
 - Stale warning bar → `role="status"`
 - No toast/snackbar notifications exist anywhere (UX-REQ-50)
 

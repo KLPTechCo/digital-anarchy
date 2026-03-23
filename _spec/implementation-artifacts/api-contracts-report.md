@@ -222,11 +222,13 @@ All Sebuf RPCs are routed through a single catch-all:
 ## C. Shared Server Infrastructure
 
 ### Router (`server/router.ts`)
+
 - `createRouter(routes)` → builds `Map<"POST /path", handler>`
 - Static path lookup only (no dynamic segments for Sebuf routes)
 - Normalizes trailing slashes
 
 ### CORS (`server/cors.ts` + `api/_cors.js`)
+
 - Allowed origins: `*.worldmonitor.app`, Vercel preview deploys (`*.vercel.app`), `localhost`, `127.0.0.1`, `tauri.localhost`, `tauri://localhost`, `asset://localhost`
 - Allowed headers: `Content-Type`, `Authorization`, `X-WorldMonitor-Key`
 - Methods: `POST, OPTIONS` (Sebuf), varies per legacy endpoint
@@ -234,12 +236,14 @@ All Sebuf RPCs are routed through a single catch-all:
 - `Vary: Origin` header
 
 ### Error Mapper (`server/error-mapper.ts`)
+
 - `ApiError` → mapped status code (4xx expose original message, 5xx get generic message)
 - `TypeError` → 502
 - Catch-all → 500
 - Rate-limit errors include `Retry-After` header
 
 ### Redis Cache (`server/_shared/redis.ts`)
+
 - Upstash Redis REST API (edge-compatible)
 - `getCachedJson(key)` / `setCachedJson(key, value, ttl)`
 - 3-second timeout per operation
@@ -248,11 +252,13 @@ All Sebuf RPCs are routed through a single catch-all:
 - Additional `mgetJson(keys)` helper in `infrastructure/v1/_shared.ts` for batch reads
 
 ### Hash Utility (`server/_shared/hash.ts`)
+
 - FNV-1a 52-bit hash using BigInt
 - Returns base-36 string
 - Used for cache key generation (summaries, baselines)
 
 ### Constants (`server/_shared/constants.ts`)
+
 - `CHROME_UA` — Chrome user-agent string for upstream requests
 - `yahooGate()` — global Yahoo Finance request rate limiter (600ms min gap)
 
@@ -261,11 +267,13 @@ All Sebuf RPCs are routed through a single catch-all:
 ## D. Authentication & Security Patterns
 
 ### CORS Origin Validation
+
 - **All endpoints**: Origin checked against allowlist pattern
 - **Legacy**: `api/_cors.js` → `getCorsHeaders(req)` / `isDisallowedOrigin(req)`
 - **Sebuf**: `server/cors.ts` → same logic, TS port
 
 ### API Key Authentication
+
 - **Header**: `X-WorldMonitor-Key`
 - **Validation**: `api/_api-key.js` → checks against `WORLDMONITOR_VALID_KEYS` (comma-separated env var)
 - **Desktop (Tauri) origins**: API key **required**
@@ -273,6 +281,7 @@ All Sebuf RPCs are routed through a single catch-all:
 - **Applied**: In the Sebuf router catch-all (`api/[domain]/v1/[rpc].ts`) after CORS preflight
 
 ### Input Sanitization
+
 - RSS proxy: domain allowlist (160+ domains), redirect domain validation
 - News summarization: headline count (max 10), headline length (max 500), geoContext (max 2000)
 - Aircraft batch: max 20 ICAO24s per request
@@ -280,12 +289,14 @@ All Sebuf RPCs are routed through a single catch-all:
 - Stablecoin coin IDs: regex-validated (`/^[a-z0-9-]+$/`)
 
 ### Rate Limiting
+
 - Registration endpoint: 5 requests/hr per IP (in-memory Map)
 - Yahoo Finance: global 600ms gate between requests
 - HN API: bounded concurrency (10 parallel)
 - Graceful degradation on upstream 429s (return stale cache or empty)
 
 ### Error Handling Patterns
+
 - **Graceful degradation**: Every Sebuf handler returns empty/default result on failure (never throws to client)
 - **Multi-tier cache fallback**: Theater posture uses fresh → stale (24hr) → backup (7d) → empty
 - **Provider fallback**: Market quotes Finnhub → Yahoo; trending repos gitterapp → herokuapp; military flights OpenSky → Wingbits

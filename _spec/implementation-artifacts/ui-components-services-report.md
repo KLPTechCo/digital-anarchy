@@ -205,7 +205,9 @@
 ## C) State Management
 
 ### Pattern
+
 **No framework** — World Monitor uses a **service-singleton + event-driven** pattern:
+
 - **`App` class** acts as the central orchestrator; holds all state (panels, map layers, monitors, allNews, predictions, etc.) as private fields
 - **Services** are singleton modules (module-level `let` variables, circuit breaker caches, `Map` caches)
 - **Panels** receive data via direct method calls from `App` (e.g., `panel.update(data)`)

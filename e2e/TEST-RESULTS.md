@@ -1,4 +1,5 @@
 # E2E Test Suite & Smoke Test Results
+
 ## Story 5-5 — E2E Test Suite and Smoke Test Validation
 
 **Branch:** upstream-sync (5-5-e2e-smoke-test-pass)
@@ -75,6 +76,7 @@ or fork-modified UI elements. Findings:
 | Cloud fallback URL | `https://worldmonitor.app` — **correct**, matches `src/services/runtime.ts` line 123 |
 
 **Test descriptions** (not assertions) that use "WorldMonitor":
+
 - `runtime-fetch.spec.ts:728` — `test('cloud fallback blocked without WorldMonitor API key'...`
 - `runtime-fetch.spec.ts:799` — `test('cloud fallback allowed with valid WorldMonitor API key'...`
 
@@ -136,6 +138,7 @@ vercel dev &
 ### Routes covered
 
 **Frontend (8 routes):**
+
 - `GET /` — index.html
 - `GET /manifest.webmanifest` — PWA manifest
 - `GET /offline.html` — Service worker offline shell (may 404 in dev)

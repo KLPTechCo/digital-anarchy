@@ -36,6 +36,7 @@ So that I have a stable integration target to validate before merging into `deve
 ## Scope Boundary
 
 This story covers:
+
 - Creating the `upstream-sync/2026-03-18` branch from `develop`
 - Merging `upstream/main` (648 commits, PRs #809–#1851) into the sync branch
 - Resolving all merge conflicts in fork-modified files
@@ -45,6 +46,7 @@ This story covers:
 - Documenting all conflict resolutions
 
 This story does NOT cover:
+
 - Build validation or lint checks (Story 5-2)
 - Environment variable auditing (Story 5-3)
 - Fork branding visual verification (Story 5-4)
@@ -131,6 +133,7 @@ This story does NOT cover:
 ### Expected Conflict Hotspots
 
 Based on the 648-commit gap (130 features, 380 fixes, 50 refactors), expect conflicts in:
+
 - `package.json` — new deps from Forecast, MCP, Widgets, Sanctions, Radiation, Thermal panels
 - `src/main.ts` — upstream may have restructured imports
 - `vite.config.ts` — dynamic env loading (#1791)

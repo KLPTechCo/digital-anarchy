@@ -30,6 +30,7 @@ So that the full upstream feature set is available for QA validation.
 ## Scope Boundary
 
 This story covers:
+
 - Opening a PR from `upstream-sync/2026-03-18` → `develop`
 - Verifying CI passes on the PR
 - Merging the PR
@@ -38,6 +39,7 @@ This story covers:
 - Documenting any panels that need API keys not yet configured
 
 This story does NOT cover:
+
 - Production promotion (separate operational decision)
 - Configuring new API keys in Vercel (manual operator task, guided by Story 5-3 env audit)
 - Writing new E2E tests for upstream features (future work)

@@ -86,6 +86,7 @@ In [src/components/GlobeMap.ts](src/components/GlobeMap.ts#L452-L460):
 ### GlobeMap Public Interface
 
 The GlobeMap instance is accessed via `this.state.map` in App.ts. Key methods:
+
 - `setRenderPaused(paused: boolean)` — called by `openCountryBriefByCode`
 - `highlightCountry(code: string)` — highlights country on globe
 - `fitCountry(code: string)` — zooms/pans to country
@@ -94,6 +95,7 @@ The GlobeMap instance is accessed via `this.state.map` in App.ts. Key methods:
 ### URL Parameter Parsing
 
 [src/utils/urlState.ts](src/utils/urlState.ts#L58-L110) already parses:
+
 - `?country=UA` — 2-letter code (A-Z regex validated)
 - `?expanded=1` — boolean flag
 - `?view=`, `?zoom=`, `?lat=`, `?lon=`, `?timeRange=`, `?layers=`

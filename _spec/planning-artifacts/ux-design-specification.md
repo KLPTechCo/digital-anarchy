@@ -106,12 +106,14 @@ All three entry points converge on the same App.ts event flow and must produce i
 | **PWA (offline)** | Network continuity | Inherited, working | MVP (inherited) | Service worker cache-first assets |
 
 **Mobile strategy clarification:** The PRD defines Marcus (mobile-arriving casual visitor) as a tertiary MVP user — his journey must work in MVP. Mobile *functions* today (inherited SVG fallback). The distinction:
+
 - **MVP:** Mobile works — deep-links orient correctly, panels render data, no crashes. Inherited behavior, no fork work needed.
 - **Growth:** Mobile is refined — `MobileWarningModal` softened/suppressed, touch interactions improved, panel grid optimized for narrow viewports.
 
 **Interaction model:** Mouse/keyboard primary. Touch is secondary (mobile fallback). No gesture-driven interactions in the fork — inherit upstream's responsive behavior.
 
 **Platform constraints (from architecture):**
+
 - WebGL 2 required for desktop globe (deck.gl/MapLibre) — no Canvas fallback
 - Mobile automatically gets SVG/D3 map renderer (no WebGL) via `MapContainer` facade
 - Two HTML entry points: `index.html` (SPA) and `settings.html` (operator config) — both need fork branding
@@ -315,17 +317,20 @@ Since no product does what Situation Monitor does, we extract patterns from adja
 ### Design Inspiration Strategy
 
 **What to Adopt:**
+
 - **Globe-as-interface** from flight trackers — proven, intuitive, matches our geographic organizing principle. *Already implemented upstream.*
 - **Panel density** from financial terminals — signals credibility, enables cross-domain correlation. *Already implemented upstream.*
 - **Zero-config value delivery** from Twitter — land and absorb, no setup required. *Already implemented upstream.*
 - **Deep-link as first impression** from social platforms — the share is the product. *Partially upstream; OG card coherence is fork work.*
 
 **What to Adapt:**
+
 - **Twitter's serendipitous discovery** → translate from algorithmic feed to geographic hotspots. The globe replaces the algorithm — colour intensity and InsightsPanel replicate the "oh, something's happening there" moment.
 - **Bloomberg's data density** → keep the density, remove the complexity. Panels are read-only views, not configurable workspaces. Density without configuration.
 - **Flightradar24's map interaction** → adopt click-to-reveal, but our cascade (multi-panel activation) goes far beyond their single-entity detail view.
 
 **What to Avoid:**
+
 - **Infinite scroll** — conflicts with "informed confidence" emotional goal
 - **Algorithmic curation** — conflicts with "show everything" transparency principle
 - **Configuration overhead** — conflicts with zero-effort interaction model
@@ -374,6 +379,7 @@ Situation Monitor does not adopt, replace, or build a design system. It **inheri
 ### Implementation Approach
 
 **Tier 1 — `--sm-*` CSS Custom Properties (zero merge risk):**
+
 - All fork CSS custom properties use the `--sm-` prefix (Situation Monitor) — never `--fork-` or any generic prefix
 - Define fork colour palette, typography, and chrome as `--sm-*` tokens in `src/fork/theme.css`
 - Inject via `<style id="fork-theme">` at runtime through `src/fork/theme-inject.ts`
@@ -381,12 +387,14 @@ Situation Monitor does not adopt, replace, or build a design system. It **inheri
 - Branding injection must complete in < 200ms (per emotional design principle)
 
 **Tier 2 — Fork Component Wrappers (low merge risk):**
+
 - `src/fork/` directory for fork-specific component wrappers
 - Wrapper components delegate to upstream components with fork-specific props/styling
 - Example: `ForkHeader` wraps upstream header with Situation Monitor branding
 - Never modify upstream component files directly
 
 **Tier 3 — Upstream Modifications (tracked merge risk):**
+
 - When CSS-only or wrapper approaches are insufficient
 - Each modification tracked in `src/fork/UPSTREAM_CHANGES.md`
 - Minimized to essential changes (e.g., panel order if not configurable via CSS/config)
@@ -419,6 +427,7 @@ src/fork/
 | **Opinion layer (Growth)** | `--sm-panel-opinion-border`, `--sm-panel-fact-border` | Semantic variants for mixed fact/opinion panels |
 
 **What the fork does NOT theme:**
+
 - Panel layout/grid logic (upstream)
 - Component interaction behaviour (upstream)
 - Data fetching/caching patterns (upstream)
@@ -535,11 +544,13 @@ The **uniform globe** failure is the most insidious — it looks like a quality 
 ### Experience Mechanics
 
 **1. Initiation:**
+
 - User opens URL (direct) or clicks shared link (deep-link)
 - No authentication, no onboarding, no splash screen
 - Globe + panels render simultaneously
 
 **2. Scan Interaction (zero-click):**
+
 - Globe displays with colour-coded intensity — hotspots glow, calm regions fade
 - InsightsPanel (above-fold) shows top 3-5 global developments as text summaries
 - PizzIntIndicator provides at-a-glance threat/activity level
@@ -547,12 +558,14 @@ The **uniform globe** failure is the most insidious — it looks like a quality 
 - User's eyes move: globe → InsightsPanel → panel headers → done
 
 **3. Feedback (passive):**
+
 - Visual intensity IS the feedback — brighter = more significant
 - InsightsPanel text confirms what the globe suggests
 - Data freshness indicators confirm "this is current"
 - The absence of error states IS the quality signal
 
 **4. Completion (natural):**
+
 - The globe is bounded — the user has "seen the world"
 - InsightsPanel is finite — the summary ends
 - The user feels: "I know what's happening. I can close this."
@@ -560,6 +573,7 @@ The **uniform globe** failure is the most insidious — it looks like a quality 
 - No "see more" prompts, no infinite scroll, no notification badges pulling them deeper
 
 **5. Optional Drill (secondary):**
+
 - If something catches their eye: click country → multi-panel cascade
 - Or ⌘K → search → same cascade
 - Or arrive via deep-link → pre-oriented to specific country
@@ -682,6 +696,7 @@ Upstream uses `SF Mono → Monaco → Cascadia Code → Fira Code → DejaVu San
 | **No `--sm-font-*` tokens in MVP** | Typography is not a brand differentiator — the colour shift handles identity. |
 
 **Typography hierarchy (inherited from upstream):**
+
 - Body: `--font-body` (monospace stack)
 - Headings: Same stack, weight/size differentiation
 - Data values: Tabular-nums variant for aligned numbers in panels
@@ -699,6 +714,7 @@ Upstream uses `SF Mono → Monaco → Cascadia Code → Fira Code → DejaVu San
 | **Panel order: spike needed** | Tier 1 (CSS) or Tier 3 (upstream mod) remains TBD |
 
 **Layout principles (all inherited):**
+
 1. Desktop-primary density — panels visible simultaneously, not stacked
 2. Globe as focal point — largest visual element, immediate attention
 3. Panel grid as information architecture — domain separation through spatial layout
@@ -707,6 +723,7 @@ Upstream uses `SF Mono → Monaco → Cascadia Code → Fira Code → DejaVu San
 ### Accessibility Considerations
 
 **Upstream's accessibility posture (inherited):**
+
 - Light mode includes WCAG-compliant contrast ratios (documented in CSS comments)
 - Semantic colours shift to darker variants in light mode
 - RTL support built in
@@ -761,6 +778,7 @@ The design direction decision is: **"Upstream's layout + Teal Shift theming."** 
 | **Share button** | Teal accent (`--sm-accent`) — one of the few accent-coloured elements per the restraint rule. |
 
 **What changes from upstream (user-visible):**
+
 1. Background tone shifts from neutral dark to cool/blue dark
 2. Panel borders gain a subtle teal tint
 3. Header says "Situation Monitor" with a teal accent mark
@@ -769,6 +787,7 @@ The design direction decision is: **"Upstream's layout + Teal Shift theming."** 
 6. Share button is teal
 
 **What stays identical:**
+
 - All 26 panel layouts
 - Globe rendering and interaction
 - Panel content and data display
@@ -805,12 +824,14 @@ MVP brand differentiation relies on **two primary elements**: header text and OG
 ### Implementation Approach
 
 **Phase 1 — MVP (Tier 1 only):**
+
 1. Create `src/fork/theme.css` with all `--sm-*` token definitions
 2. Create `src/fork/theme-inject.ts` with runtime injection
 3. Add `import './fork/theme-inject'` to `main.ts`
 4. Total: ~50 lines of CSS, ~20 lines of TypeScript
 
 **Phase 1 verification:**
+
 - Page loads with teal-shifted backgrounds
 - `<style id="fork-theme">` is last in `<head>`
 - Branding injection < 200ms
@@ -822,6 +843,7 @@ MVP brand differentiation relies on **two primary elements**: header text and OG
 6. Design and implement OG card templates at `/api/og-story`
 
 **Phase 2 verification:**
+
 - Header shows "Situation Monitor" with teal accent
 - OG cards generate correctly at `/api/og-story`
 - OG card preview matches design spec
@@ -833,6 +855,7 @@ MVP brand differentiation relies on **two primary elements**: header text and OG
 9. Opinion-layer panel visual variants (`--sm-panel-opinion-border`)
 
 **Phase 3 verification:**
+
 - Theme Verification Checklist (Step 6) passes
 - New tokens don't conflict with upstream
 - Opinion panel borders visually distinct from fact panels
@@ -891,6 +914,7 @@ flowchart TD
 ```
 
 **Key Decision Points:**
+
 - **Glance gate (5s):** Globe + InsightsPanel must answer "anything new?" instantly. If hotspots look identical to yesterday → exit. Scan failure modes from Step 7 apply.
 - **Health indicator detection:** Status dots per panel (or consolidated health bar in header) allow Ed to detect degraded sources *proactively* rather than by accident. Visible only when `?debug=1` query param is set or localStorage operator preference is enabled from the settings page.
 - **Read gate (15-30s):** InsightsPanel summaries must prioritize novelty. Stale summaries = false signal.
@@ -898,6 +922,7 @@ flowchart TD
 - **Operational branch:** Operator journey, not consumer journey. Fork-specific: only Ed hits this path. Operator UI gated by localStorage preference toggle or `?debug=1` — no auth needed.
 
 **Error Recovery:**
+
 - Stale cache → Yellow "last updated X minutes ago" badge on InsightsPanel
 - Panel load failure → Graceful degradation per FR10-11: panel shows "Data source unavailable" with last-known timestamp
 - Globe render failure → Fallback to list view (upstream feature)
@@ -940,12 +965,14 @@ flowchart TD
 ```
 
 **Key Decision Points:**
+
 - **Region navigation:** Rachel doesn't scan the whole globe. She goes to *her* regions. Navigation must support direct region access — globe rotation or list/search.
 - **Stale data gate:** When Rachel returns after 3+ days and her tracked region's data hasn't updated (upstream source down), a prominent "Last updated X days ago" warning prevents trading decisions on stale intelligence. Visual warning escalates at configurable threshold (e.g., > 24h = amber, > 72h = red).
 - **Signal-price gap:** The correlation moment — AI threat vs market price. This is Rachel's "unexpected intersection." Both panels must be visible simultaneously or in quick alternation.
 - **Share trigger:** Rachel shares when she has a *thesis*, not raw data. The OG card must represent the country + assessment compellingly enough to drive clicks.
 
 **Error Recovery:**
+
 - Prediction market data stale → Show "last synced" timestamp prominently. Rachel will mentally discount stale odds.
 - AI reclassification missed (didn't fire) → No recovery needed; Rachel checks manually.
 - Region navigation confusion → Globe should support search-to-fly (type country → globe rotates).
@@ -986,6 +1013,7 @@ flowchart TD
 ```
 
 **Key Decision Points:**
+
 - **Skip animation on deep-link:** When `?c=` param is present, bypass the globe spin animation and snap directly to the country view. Save the 800ms spectacle for organic navigation.
 - **10-second bounce gate:** Deep-link must land Marcus *exactly* where the sharer intended with data already visible. No loading spinners. No "click here to start."
 - **Rate-limit burst handling:** Shared links can generate burst traffic (1000 simultaneous clicks). If API rate limit is hit, serve cached/degraded version rather than a spinner or error.
@@ -993,6 +1021,7 @@ flowchart TD
 - **"Unexpected intersection" moment:** Retention driver. Marcus sees earthquake + refugee data on Turkey — cross-domain insight he can't get elsewhere. Must happen *organically* through visual proximity of panels.
 
 **Error Recovery:**
+
 - Deep-link param invalid → Fall back to globe home view with World Brief (don't show error)
 - Data source for linked panel unavailable → Show panel with "temporarily unavailable" + other panels still work
 - Slow first load (no SW) → Skeleton loading states for panels within 3s FCP target
@@ -1030,6 +1059,7 @@ sequenceDiagram
 ```
 
 **Failure Paths:**
+
 - Bot UA not recognized → Falls through to SPA redirect (no OG card, but no crash)
 - OG image generation timeout (>10s) → Twitter shows link without image preview
 - Invalid country code → OG handler returns generic Situation Monitor branded card
@@ -1064,6 +1094,7 @@ flowchart TD
 ```
 
 **Graduation Mechanics:**
+
 - **Visit 1 (Marcus):** Deep-link entry, "unexpected intersection" moment, bookmark.
 - **Visit 2-3:** Returns when major events break. Standard scan. No special treatment yet.
 - **Visit 4+ (Growth phase):** "What you missed" panel appears — top changes since localStorage-tracked last visit. This is the retention mechanic that converts periodic visitors into regulars.
@@ -1078,11 +1109,13 @@ flowchart TD
 Patterns observed across all human journeys:
 
 **Navigation Patterns:**
+
 - **Scan-first entry:** Every journey starts with the globe + InsightsPanel. Even Rachel (goal-directed) does a quick glance scan before navigating to her region.
 - **Globe-as-navigation:** Clicking countries/clusters on the globe is the primary drill mechanic. Search-to-fly is the secondary.
 - **Deep-link orientation:** Shared links bypass the scan phase and land directly on drill view. Globe animation skipped — snap to country.
 
 **Decision Patterns:**
+
 - **Tiered commitment:** Glance (5s) → Read (15-30s) → Study (1-2min). Each tier has an exit ramp. Users only invest more time if the previous tier rewarded attention.
 - **Cross-panel correlation:** The "aha" moment across all human journeys comes from seeing *two panels* together that tell a story neither tells alone. This must be spatially enabled.
 
@@ -1097,6 +1130,7 @@ Patterns observed across all human journeys:
 These pairs should be visually adjacent or quickly toggle-able in the panel layout.
 
 **Feedback Patterns:**
+
 - **Temporal freshness:** Users need to know when data was last updated. "Last synced X" timestamps on every panel. Visual escalation at staleness thresholds (> 24h amber, > 72h red).
 - **State change signaling:** Globe hotspots must visually indicate *change* (new/escalated), not just *existence*. Client-side implementation: store hotspot state snapshot in localStorage on each visit, diff on next load, add pulsing ring to *changed* hotspots. **This is the scan-phase killer feature** — it answers "what's different?" instantly. Phase: Growth (shares localStorage infrastructure with Journey 5).
 - **Graceful degradation:** Individual panel failure ≠ whole-page failure. Show partial data with clear status per source.
@@ -1162,6 +1196,7 @@ Upstream provides 62 components (~26,696 LOC) across 9 categories:
 **Purpose:** Two-layer CSS injection per Step 6/8 architecture. Defines `--sm-*` tokens and reassigns upstream token names at runtime.
 
 **Implementation:**
+
 - Tokens are **inlined as a template literal** in `theme-inject.ts` — no external CSS file load, eliminates FOUC race condition entirely
 - `theme.css` exists as documentation/reference only; runtime uses the inlined copy
 - Creates `<style id="fork-theme">` element
@@ -1180,6 +1215,7 @@ Upstream provides 62 components (~26,696 LOC) across 9 categories:
 **Purpose:** Replace upstream header title/branding with Situation Monitor identity. Primary brand touchpoint.
 
 **Anatomy:**
+
 - Title text: "Situation Monitor" in `--sm-accent` (`#4dd0e1`)
 - Replaces content within upstream's existing `<header>` element — does NOT replace the header structure
 
@@ -1200,6 +1236,7 @@ Upstream provides 62 components (~26,696 LOC) across 9 categories:
 **Purpose:** Per-panel status dot showing data source freshness. Enables Ed's proactive operational detection (Journey 1).
 
 **Anatomy:**
+
 - Small colored dot (8px) in panel header, right side
 - Tooltip on hover: "Last updated: {timestamp}" or "Source unavailable since {timestamp}"
 
@@ -1231,6 +1268,7 @@ const FRESHNESS_THRESHOLDS: Record<string, { warn: number; critical: number }> =
 **Purpose:** Prominent "last updated X" warning when data exceeds freshness threshold. Prevents trading decisions on stale intelligence (Journey 2).
 
 **Anatomy:**
+
 - Banner inside panel content area, top position
 - Text: "Last updated {relative time}"
 
@@ -1250,11 +1288,13 @@ const FRESHNESS_THRESHOLDS: Record<string, { warn: number; critical: number }> =
 **Purpose:** Debug/operational layer for Ed. Split from single OperatorOverlay for faster render.
 
 **OperatorBadge** (~60 LOC):
+
 - Floating badge (bottom-right): "17/17 sources OK" or "2 sources degraded"
 - Always rendered when operator mode is on
 - Click to open OperatorDrawer
 
 **OperatorDrawer** (~100 LOC, lazy-loaded on click):
+
 - Per-source status list with freshness timestamps
 - Link to Vercel dashboard (external)
 - Semi-transparent dark background using `--sm-*` tokens
@@ -1274,6 +1314,7 @@ const FRESHNESS_THRESHOLDS: Record<string, { warn: number; critical: number }> =
 **Purpose:** Visual indicator of *changed* hotspots since last visit. Pulsing teal ring around new/escalated hotspot markers. The scan-phase killer feature — answers "what's different?" instantly.
 
 **Anatomy:**
+
 - CSS animation: `@keyframes pulse-ring` around changed markers
 - Pulse for 10s after load, then settle to static ring
 - Delta source: localStorage snapshot via `VisitTracker.ts`
@@ -1287,6 +1328,7 @@ const FRESHNESS_THRESHOLDS: Record<string, { warn: number; critical: number }> =
 **Purpose:** "What you missed" summary for returning visitors. Top 3-5 changes since last visit. Retention mechanic for casual → engaged graduation (Journey 5).
 
 **Anatomy:**
+
 - Collapsible card at top of InsightsPanel
 - Entries: "Taiwan: CII elevated 62→71", "New hotspot: Red Sea shipping"
 - Dismissable — hidden until next visit after dismissal
@@ -1345,6 +1387,7 @@ Panel.prototype.update = function(data: unknown) {
 ```
 
 This is THE canonical fork interception pattern. Every Tier 2 hook uses it. Benefits:
+
 - Auditable — grep `origUpdate` / `orig` prefix to find all patches
 - Testable — signature assertions catch upstream changes at boot
 - Reversible — remove the import to disable the patch
@@ -1476,12 +1519,14 @@ The most critical pattern family. Every panel independently fetches data from di
 ```
 
 **Rules:**
+
 - **Never show a blank panel.** Skeleton → content → stale content → empty state. Always *something* visible.
 - **Never hide stale data.** Stale data with a timestamp is more valuable than a "loading" spinner. Stale-while-revalidate pattern throughout.
 - **Per-panel independence.** One panel's failure never affects another. No global error overlays for single-source failures.
 - **Timestamps on everything.** Every panel with live data displays "Updated {relative time}" in the header.
 
 **Loading Animation:**
+
 - Skeleton pulse: 2s ease-in-out loop. `--surface` (#141414) → `--surface-hover` (#1a1a1a) gradient sweep.
 - Panel header renders immediately (static). Only body area pulses.
 - No spinners anywhere. Skeleton loaders only — they indicate *shape* of incoming content.
@@ -1495,12 +1540,14 @@ Timestamps update every 60s via a single `setInterval` (not per-panel). The `Rel
 ### Navigation Patterns
 
 **Primary Navigation: Globe Interaction**
+
 - **Click country/cluster** → Country detail panel expands (drill from scan)
 - **Scroll/pinch zoom** → Globe zoom. Layers appear/disappear based on zoom level.
 - **Search-to-fly** (⌘K) → Type country name → globe rotates + zooms → country detail opens
 - **Deep-link entry** (`?c=XX`) → Skip animation, snap to country, auto-open panel from `?t=` param
 
 **Secondary Navigation: Panel Grid**
+
 - **Panel order** → Drag-to-reorder (upstream). Persisted to localStorage.
 - **Panel collapse** → Click header to toggle. Collapsed state persisted.
 - **Panel resize** → Drag handle to span 1–4 rows. Persisted.
@@ -1508,6 +1555,7 @@ Timestamps update every 60s via a single `setInterval` (not per-panel). The `Rel
 **Fork Default Panel Order:**
 
 When no user-persisted order exists (new user / cleared localStorage), the fork loads its own default panel sequence from `src/fork/config/default-panel-order.ts`. This sequence places priority correlation pairs adjacent:
+
 - Military posture + Prediction markets (adjacent)
 - Seismic/climate + Displacement/humanitarian (adjacent)
 - CII + Economic indicators (adjacent)
@@ -1515,11 +1563,13 @@ When no user-persisted order exists (new user / cleared localStorage), the fork 
 **Never overrides user-persisted order.** If localStorage has a saved order, that takes absolute precedence. ~20 LOC.
 
 **Navigation Feedback:**
+
 - Globe fly-to animation: 800ms ease-out (skipped on deep-link)
 - Panel expand: 200ms slide-down with `--panel-bg` fade-in
 - Search modal: instant overlay (no transition delay)
 
 **Keyboard Navigation:**
+
 - `⌘K` / `Ctrl+K` → SearchModal
 - `Escape` → Close any modal/overlay
 - `Tab` → Navigate panel headers (upstream)
@@ -1530,17 +1580,20 @@ When no user-persisted order exists (new user / cleared localStorage), the fork 
 ### Feedback Patterns
 
 **Temporal Freshness Signals:**
+
 - "Updated Xm ago" → green text (within normal range)
 - "Updated Xh ago" → amber text (stale warning threshold)
 - "Updated Xd ago" → red text (critical staleness)
 - Relative time updates every 60s via single `setInterval` + `RelativeTimeFormatter`
 
 **Threat/Alert Signals (inherited, no fork modification):**
+
 - **PizzInt (DEFCON-style)** → 5 levels with `--defcon-1` through `--defcon-5`
 - **Signal modal** → `SignalModal.ts` with sound alert
 - **Intelligence gap badge** → Floating correlation badge
 
 **Fork-Specific Feedback:**
+
 - **Operator health** (MVP): OperatorBadge aggregate count. Teal = all OK. Amber = some degraded. Red = critical.
 - **Hotspot delta pulse** (Growth): Pulsing teal ring on changed hotspots. 10s pulse, then static ring.
 - **"What you missed" dismissal** (Growth): Card slides up (200ms) on dismiss. Resets next visit.
@@ -1579,6 +1632,7 @@ The ONE exception to the "no interruptive notifications" rule. When Ed redeploys
 | OperatorDrawer | Click OperatorBadge | Slide-in from right. Semi-transparent bg. Click outside or Escape to close. Lazy-loaded. |
 
 **Modal Rules:**
+
 - Only one modal at a time. New modal replaces current.
 - Background scroll locked when modal is open.
 - Escape always closes. Click-outside closes for non-critical modals.
@@ -1602,12 +1656,14 @@ The ONE exception to the "no interruptive notifications" rule. When Ed redeploys
 ```
 
 **Fork additions:**
+
 - **Health dot** [●] (8px, operator mode only): Right side of header, uses `data-sm-component="health-indicator"`
 - **Stale warning bar**: Top of content area. Amber/red by threshold. Uses `data-sm-component="stale-warning"`
 - **"Updated X ago"**: Header right side, after count badge. Uses `RelativeTimeFormatter`.
 - **`data-freshness` attribute**: On panel body element. Drives CSS saturation filter.
 
 **Cross-Panel Correlation:**
+
 - **Spatial proximity:** Default panel order places correlation pairs adjacent (Military+Prediction, Seismic+Humanitarian, CII+Economic)
 - **No link mechanism in MVP** — correlation is *visual* (panels side by side). User's brain does the correlation.
 - **Growth consideration:** Panel-to-panel highlighting (click country in CII → highlights in Economic) is Growth, not MVP.
@@ -1704,6 +1760,7 @@ Situation Monitor is inherently desktop-first. The 3D WebGL globe, 26-panel grid
 **Mobile Simplified View Posture:**
 
 MobileWarningModal says "desktop recommended" — appropriate for the scan-first experience that requires information density. But mobile visitors (especially from Rachel's shared Twitter links) still get:
+
 - Globe (SVG fallback) with all hotspot data
 - All 26 panels in stacked single-column view
 - Theme branding (`--sm-*` tokens work everywhere)
@@ -1773,6 +1830,7 @@ AA is the industry standard. Upstream provides substantial a11y infrastructure. 
 **`AriaAnnouncer.ts` — Debounced ARIA Live Region:**
 
 If multiple panels cross stale thresholds simultaneously (e.g., after network outage recovery), individual `aria-live` regions would flood the screen reader with 5+ rapid announcements. Instead, a single hidden `<div aria-live="polite">` in the fork root batches state changes:
+
 - "3 panels have stale data" rather than 5 individual announcements
 - Debounce window: 2 seconds (collect changes, announce once)
 - ~30 LOC in `src/fork/services/AriaAnnouncer.ts`
@@ -1834,6 +1892,7 @@ Traffic-light signals (green/amber/red) for freshness are always supplemented by
 | Color blindness | Chrome DevTools → Rendering → Emulate vision deficiency | Once per component |
 
 **Fork-Specific CI Checks:**
+
 - `@axe-core/playwright` visual a11y scan
 - Grep for hardcoded hex in `src/fork/` (should find zero)
 - Grep for missing `aria-label` on interactive fork elements
@@ -1845,6 +1904,7 @@ Traffic-light signals (green/amber/red) for freshness are always supplemented by
 ### Implementation Guidelines
 
 **Responsive Development:**
+
 - All fork CSS uses upstream breakpoints (768px, 600px). No new breakpoints.
 - Fork components inside panels inherit panel responsiveness automatically.
 - Standalone fork components (OperatorBadge, OperatorDrawer) need explicit mobile rules in `<style id="fork-theme">`.
@@ -1852,6 +1912,7 @@ Traffic-light signals (green/amber/red) for freshness are always supplemented by
 - Test fork components at 320px width (smallest supported viewport).
 
 **Accessibility Development:**
+
 - Every interactive fork element gets `aria-label`.
 - Dynamic state changes use `AriaAnnouncer.ts` (debounced) instead of individual `aria-live` regions.
 - Color/animation is always supplementary, never sole communicator.
@@ -1860,6 +1921,7 @@ Traffic-light signals (green/amber/red) for freshness are always supplemented by
 - All fork components tested with keyboard-only navigation before merge.
 
 **Extended Pattern Adoption Checklist (accessibility additions):**
+
 - [ ] Touch targets ≥ 44x44px on mobile
 - [ ] `aria-label` on all interactive elements
 - [ ] `prefers-reduced-motion` respected (via `data-sm-component` or explicit)

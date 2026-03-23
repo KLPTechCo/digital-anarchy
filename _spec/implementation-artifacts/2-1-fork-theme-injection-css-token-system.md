@@ -165,6 +165,7 @@ The CSS cascade in this project uses layers:
 **Key insight from Story 0.1:** `happy-theme.css` is imported unlayered and competes for cascade priority with `fork-theme`. Because `fork-theme` is appended to `<head>` at runtime AFTER Vite's build-time CSS injection, it naturally comes last in document order and wins the cascade. This must be verified (Task 8.2).
 
 **Import order in `main.ts`:**
+
 1. `'./styles/base-layer.css'` (layered via `@layer base`)
 2. `'./styles/happy-theme.css'` (unlayered)
 3. `'maplibre-gl/dist/maplibre-gl.css'`
@@ -194,6 +195,7 @@ The current `index.ts` inlines a minimal CSS string:
 ```
 
 **Problems with current approach:**
+
 - Self-referential: `--sm-bg: var(--bg)` then `--bg: var(--sm-bg)` — circular reference, doesn't actually override background
 - Missing tokens: No border, map, chart, or panel-specific tokens
 - No light mode defensive override

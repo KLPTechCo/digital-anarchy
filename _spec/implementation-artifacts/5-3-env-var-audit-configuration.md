@@ -29,6 +29,7 @@ So that new panels and services don't fail silently in Preview or Production.
 ## Scope Boundary
 
 This story covers:
+
 - Auditing all new `process.env.*` and `import.meta.env.*` references introduced by upstream
 - Verifying Redis key prefix compliance (ARCH-29)
 - Updating `fork.env.example` with all new variables
@@ -36,6 +37,7 @@ This story covers:
 - Producing a categorized env var report (required vs optional, by domain)
 
 This story does NOT cover:
+
 - Actually configuring env vars in Vercel dashboard (manual operator task)
 - Provisioning new API keys (separate operational task)
 - Build validation (Story 5-2)
@@ -209,6 +211,7 @@ These were anticipated from Epic 5 PR analysis but are **not present in the code
 **Status: COMPLETE** — `fork.env.example` created at repo root.
 
 Changes from upstream `.env.example`:
+
 - Added **27 new variables** across 6 new sections (Cybersecurity, AI/Ollama, LLM Overrides, WTO Trade, Seed Fallback Flags, Vite Feature Flags)
 - All existing upstream variables preserved and re-documented
 - Each variable annotated with `# REQUIRED` or `# OPTIONAL` plus a one-line description

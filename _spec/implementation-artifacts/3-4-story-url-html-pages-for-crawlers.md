@@ -33,6 +33,7 @@ So that Situation Monitor content appears in search results.
 ## Scope Boundary
 
 This story covers:
+
 - Updating `middleware.ts` to whitelist search engine crawlers on `/api/story` and `/api/og-story` paths
 - Updating `api/story.js` to serve richer, crawler-friendly HTML with Situation Monitor branding
 - Updating `api/story.js` branding from "World Monitor" to "Situation Monitor"
@@ -42,6 +43,7 @@ This story covers:
 - Registering the new test file in `package.json` `test:sidecar` script
 
 This story does NOT cover:
+
 - `api/og-story.js` branding changes (OG image still shows upstream "WORLDMONITOR" — fork OG image branding is a separate concern once visual identity is fully defined in Epic 2)
 - Sitemap.xml generation (Epic 11, Story 11.1)
 - SSR landing page (Epic 11, Story 11.2)
@@ -110,6 +112,7 @@ This story does NOT cover:
 ### Current State Analysis
 
 **`api/story.js` (83 LOC):**
+
 - `COUNTRY_NAMES`: Hardcoded 20-country map (UA, RU, CN, US, IR, IL, TW, KP, SA, TR, PL, DE, FR, GB, IN, PK, SY, YE, MM, VE)
 - `BOT_UA`: Regex matching social bots + googlebot (twitterbot|facebookexternalhit|linkedinbot|slackbot|telegrambot|whatsapp|discordbot|redditbot|googlebot)
 - Bot path: Serves HTML with OG meta tags, minimal `<body>` (just `<h1>`, `<p>`, link)
@@ -119,6 +122,7 @@ This story does NOT cover:
 - Cache: `public, max-age=300, s-maxage=300, stale-while-revalidate=60`
 
 **`middleware.ts` (131 LOC):**
+
 - `BOT_UA`: Broad regex catching bots, crawlers, spiders, AI bots (claudebot, gptbot, ccbot)
 - `SOCIAL_PREVIEW_UA`: Narrow regex for social platform bots only
 - `SOCIAL_PREVIEW_PATHS`: Set containing `/api/story` and `/api/og-story`
@@ -126,6 +130,7 @@ This story does NOT cover:
 - Resolution path: Add search engine bot whitelist to middleware, allow on story paths
 
 **`api/og-story.js` (240 LOC):**
+
 - SVG image generator for OG cards (1200×630)
 - Branding says "WORLDMONITOR" — out of scope for this story (visual identity changes tracked separately in Epic 2)
 - Has `escapeXml()` for SVG output safety
@@ -286,6 +291,7 @@ function renderStory(query = '', userAgent = 'Googlebot/2.1') {
 ### Country Name Expansion
 
 The current 20-country map should be expanded to cover all ISO 3166-1 alpha-2 codes (~249 entries including territories). A comprehensive list should include at minimum:
+
 - All 193 UN member states
 - Commonly referenced territories (TW, HK, PS, XK)
 
@@ -303,6 +309,7 @@ Keep as a single `const COUNTRY_NAMES = { ... }` object. Do NOT import from exte
 ### Merge Debt Tracking
 
 This story creates merge debt in 3 upstream files:
+
 1. **`middleware.ts`** — Added `SEARCH_ENGINE_UA` regex and whitelist check (easily re-applied after upstream merge)
 2. **`api/story.js`** — Rebranding + HTML enhancement (higher merge risk if upstream changes story handler)
 3. **`package.json`** — Added test file to `test:sidecar` (trivial merge)

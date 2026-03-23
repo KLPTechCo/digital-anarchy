@@ -26,6 +26,7 @@ So that I know Production is correctly configured and serving traffic.
 ## Scope Boundary
 
 This story covers:
+
 - Configuring GitHub branch protection on `main` to require CI status checks before merge
 - Creating a post-deploy verification script (`scripts/verify-deploy.sh`) that validates Vercel build config (rewrites, cache headers, route patterns)
 - Creating a deploy verification GitHub Actions workflow (`.github/workflows/deploy-verify.yml`) that runs the verification script against Production after merge to `main`
@@ -33,6 +34,7 @@ This story covers:
 - Verifying the existing `vercel.json` cache header configuration (static assets = immutable)
 
 This story does NOT cover:
+
 - Creating the CI pipeline itself (Story 1.2 — already contexted)
 - Creating the endpoint smoke test script (Story 1.3 — that story owns `scripts/validate-endpoints.sh`)
 - Lighthouse audits (Story 1.4)
@@ -104,6 +106,7 @@ This story does NOT cover:
 ### Existing Vercel Configuration Analysis
 
 **`vercel.json` current state** (verified from codebase):
+
 - ✅ `/assets/(.*)` → `Cache-Control: public, max-age=31536000, immutable` — NFR4 satisfied
 - ✅ `/` and `/index.html` → `Cache-Control: no-cache, no-store, must-revalidate` — correct (HTML never cached)
 - ✅ `/favico/(.*)` → `Cache-Control: public, max-age=604800` — correct (7 days)
@@ -125,12 +128,14 @@ This story does NOT cover:
 ### Edge Middleware Bot Blocking Reference
 
 From `middleware.ts` (verified from codebase):
+
 - `BOT_UA` regex: blocks abuse bots (AhrefsBot, SemrushBot, MJ12bot, GPTBot, etc.)
 - `SOCIAL_PREVIEW_UA` regex: allows social preview bots (Twitter, Facebook, LinkedIn, Slack, Telegram, etc.)
 - Social preview paths: `/api/story`, `/api/og-story`
 - Public API paths: `/api/version` (no auth required)
 
 **CRITICAL middleware path scoping:** Bot filtering ONLY applies to `/api/*` and `/favico/*` paths — the middleware early-returns (pass-through) for all other paths including `/`. Tests that hit `/` with a bot UA will always get 200 regardless of bot type. The deploy verification script must:
+
 - Test abuse bot blocking on an API path (e.g., `/api/geo` with `AhrefsBot` UA → 403)
 - Test social bot allowlist on an OG route (e.g., `/api/og-story` with `Twitterbot` UA → 200)
 - NOT test bot behavior on `/` — it proves nothing about the middleware
@@ -290,6 +295,7 @@ jobs:
 ### Implementation Spec: Branch Protection Documentation
 
 Create `docs/BRANCH_PROTECTION.md` documenting:
+
 1. Navigate to GitHub repo → Settings → Branches → Branch protection rules → Add rule
 2. Branch name pattern: `main`
 3. ✅ Require status checks to pass before merging

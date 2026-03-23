@@ -30,6 +30,7 @@ So that I know the sync didn't introduce structural regressions.
 ## Scope Boundary
 
 This story covers:
+
 - Running the full lint suite and documenting the new warning baseline
 - Verifying `make build` succeeds for the `full` variant
 - Checking proto contract integrity with `buf breaking`
@@ -38,6 +39,7 @@ This story covers:
 - Fixing any build/test failures introduced by merge resolution errors from Story 5-1
 
 This story does NOT cover:
+
 - Merge conflict resolution (Story 5-1 — completed before this)
 - Environment variable auditing (Story 5-3 — can run in parallel)
 - Visual/branding verification (Story 5-4)

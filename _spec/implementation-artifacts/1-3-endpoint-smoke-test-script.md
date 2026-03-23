@@ -23,6 +23,7 @@ So that I can quickly verify deployment health after any change.
 ## Scope Boundary
 
 This story covers:
+
 - Creating `scripts/validate-endpoints.sh` as the operator-facing smoke test entrypoint
 - Validating all 57 API endpoints (46 sebuf RPC + 11 legacy REST)
 - Producing endpoint-by-endpoint pass/fail output plus aggregate summary
@@ -30,6 +31,7 @@ This story covers:
 - Supporting graceful degradation verification when one API key is intentionally missing
 
 This story does NOT cover:
+
 - Adding new API endpoints (use proto workflow and endpoint docs)
 - CI workflow integration of smoke tests (can be wired in a later story)
 - Lighthouse audit and performance scoring (Story 1.4)
@@ -105,6 +107,7 @@ This still satisfies AC naming (`validate-endpoints.sh`) while avoiding brittle 
 ### Endpoint Inventory Contract
 
 The validator must explicitly track and report:
+
 - **Total expected:** 57
 - **Composition:** 46 sebuf RPC + 11 legacy REST
 - **Mismatch behavior:** warning in output and non-success outcome unless explicitly overridden for local experimentation
@@ -112,6 +115,7 @@ The validator must explicitly track and report:
 ### Graceful Degradation Contract
 
 When a single API key is removed:
+
 - Affected endpoints should return informative degraded responses (not 500)
 - Other domains should remain healthy
 - Output should clearly separate:
@@ -147,6 +151,7 @@ scripts/validate-endpoints.sh --base-url http://127.0.0.1:3000 --timeout-ms 1500
 ### Previous Story Intelligence (Story 1.2)
 
 Relevant carry-over from `1-2-ci-pipeline-lint-test-build-proto-breaking-change-detection.md`:
+
 - CI quality gate sequencing is now defined; smoke test is intentionally separate scope in Story 1.3.
 - Determinism matters: script output should be stable and machine-readable enough for future CI adoption.
 - Existing test/toolchain conventions should be reused instead of introducing new frameworks.

@@ -31,12 +31,14 @@ So that QA testing never pollutes production cache data.
 ## Scope Boundary
 
 This story covers:
+
 - Aligning the existing Redis prefix logic to the architecture spec (`prod:` / `qa:` prefixes)
 - Creating `fork.env.example` for fork-specific env documentation
 - Adding an automated grep guard to catch direct Redis calls bypassing the wrapper
 - Verifying `.gitignore` covers all env file patterns
 
 This story does NOT cover:
+
 - CI pipeline setup (Story 1.2)
 - Endpoint smoke testing (Story 1.3)
 - Vercel dashboard configuration (manual operator task, documented in `fork.env.example`)
@@ -80,6 +82,7 @@ This story does NOT cover:
 ### Current State Analysis
 
 **`server/_shared/redis.ts` (122 LOC):**
+
 - `getKeyPrefix()` (lines 7-12): Currently returns empty string for production, `{env}:{sha8}:` for preview/development
 - `prefixKey()` (lines 15-19): Private function with cached prefix — called internally by all wrapper functions
 - `getCachedJson(key)` (lines 21-36): GET via Upstash REST, 3s timeout
@@ -112,6 +115,7 @@ function getKeyPrefix(): string {
 ```
 
 **Rationale for the change:**
+
 1. The architecture doc specifies `prod:` / `qa:` — simple, deterministic, no SHA variance
 2. SHA-based prefixes create cache fragmentation: every preview commit gets its own namespace, wasting the 10K commands/day budget
 3. `prod:` prefix for production (instead of empty string) provides consistent key structure and makes it safe to inspect Redis keys (every key has an environment label)
@@ -182,6 +186,7 @@ describe('redis key prefix', () => {
 ```
 
 **⚠️ CRITICAL: Module-level `cachedPrefix` caching issue.** The `cachedPrefix` variable is module-scoped and memoized. Dynamic `import()` in tests may return the cached module. Solutions:
+
 1. Use `tsx` with `--import` to get fresh modules (preferred — matches fork test pattern)
 2. OR: Export a `_resetPrefixCache()` test helper that sets `cachedPrefix = undefined`
 3. OR: Test `getKeyPrefix()` directly by also exporting it
@@ -257,12 +262,14 @@ UPSTASH_REDIS_REST_TOKEN=your-token-here
 ### `.gitignore` Verification
 
 Current patterns in `.gitignore` for env files:
+
 - `.env` ✅
 - `.env.local` ✅
 - `.env.vercel-backup` ✅
 - `.env.vercel-export` ✅
 
 **Need to add:**
+
 - `fork.env` — the actual fork env file (if someone creates it without `.local` suffix)
 - `fork.env.local` — local development fork env
 
@@ -273,6 +280,7 @@ The `@upstash/redis` package is in `package.json` but is unused — all Redis op
 ### Previous Story Intelligence (Story 0.1)
 
 **Relevant learnings from the spike:**
+
 - Test pattern: `npx tsx --test` for running `.test.mjs` files that import `.ts` sources
 - Assertion style: `import { describe, it } from 'node:test'; import assert from 'node:assert/strict';`
 - `tsc --noEmit` must pass after all changes
@@ -281,6 +289,7 @@ The `@upstash/redis` package is in `package.json` but is unused — all Redis op
 - Code review caught first-pass implementation gaps — double-check all AC before submitting
 
 **Git context (recent commits):**
+
 - `e5bfa49` — chore: fix markdown lint issues and scope lint targets
 - `2292e7b` — chore: remove duplicate '* 2' files and sync story 0.1 review fixes
 - Story 0.1 PR created: `develop` → `main`

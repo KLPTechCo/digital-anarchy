@@ -485,6 +485,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 ## D) Test Setup
 
 ### Playwright Configuration
+
 - **Test directory**: `e2e/`
 - **Browser**: Chromium with SwiftShader (software rendering for CI)
 - **Viewport**: 1280×720, dark mode, `en-US`, UTC timezone
@@ -509,6 +510,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 | Keyword Spike | `e2e/keyword-spike-flow.spec.ts` | ~200 | Keyword spike detection user flow |
 
 ### Unit/Data Tests (`test:data`)
+
 - **Runner**: Node.js built-in `--test`
 - **Files**: `tests/*.test.mjs`
   - `server-handlers.test.mjs` — Server handler validation (230 lines)
@@ -517,6 +519,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
   - `deploy-config.test.mjs` — Deploy configuration checks (63 lines)
 
 ### Sidecar Tests (`test:sidecar`)
+
 - **Runner**: Node.js `--test`
 - **Files**: `src-tauri/sidecar/local-api-server.test.mjs`, `api/_cors.test.mjs`, `api/youtube/embed.test.mjs`, `api/cyber-threats.test.mjs`, `api/usni-fleet.test.mjs`
 
@@ -525,6 +528,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 ## E) CI/CD Pipeline
 
 ### `build-desktop.yml` — Desktop Build
+
 - **Triggers**: Tags `v*` (push) or manual `workflow_dispatch` (variant: full/tech, draft: true/false)
 - **Concurrency**: `desktop-build-${{ github.ref }}`, cancel in-progress
 - **Build matrix** (4 platforms):
@@ -542,6 +546,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 - **Node.js bundling**: `scripts/download-node.sh` bundles Node v22.14.0 for each platform target
 
 ### `lint.yml` — Markdown Lint
+
 - **Triggers**: PRs that modify `*.md` or `.markdownlint-cli2.jsonc`
 - **Runner**: `ubuntu-latest`
 - **Steps**: Checkout → Node 22 → `npm ci` → `npm run lint:md`
@@ -551,6 +556,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 ## F) Desktop Build
 
 ### Tauri Architecture
+
 - **Framework**: Tauri 2.x (Rust shell + WebView)
 - **Rust binary** (`src-tauri/src/main.rs`, 977 lines):
   - Launches a **Node.js sidecar** (`local-api-server.mjs`) on port 46123
@@ -562,6 +568,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
   - Windows: `CREATE_NO_WINDOW` for headless Node.js, extended path sanitization
 
 ### Build Variants
+
 | Variant | Config | URL | App Name |
 |---------|--------|-----|----------|
 | Full | `tauri.conf.json` | worldmonitor.app | World Monitor |
@@ -569,6 +576,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 | Finance | `tauri.finance.conf.json` | finance.worldmonitor.app | Finance Monitor |
 
 ### Packaging Pipeline (`scripts/desktop-package.mjs`)
+
 1. **Sync versions** across `package.json` → `tauri.conf.json` → `Cargo.toml`
 2. **Download Node.js runtime** for target platform (unless `--skip-node-runtime`)
 3. **Build with Tauri CLI** — bundles per OS:
@@ -578,12 +586,14 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 4. **Optional signing**: macOS (Developer ID) or Windows (certificate thumbprint/PFX)
 
 ### Node.js Runtime Bundling (`scripts/download-node.sh`)
+
 - Downloads Node.js v22.14.0 from nodejs.org for the target triple
 - SHA-256 verification against official SHASUMS256.txt
 - Extracts binary to `src-tauri/sidecar/node/`
 - Supports: `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`, `x86_64-unknown-linux-gnu`
 
 ### Sebuf Sidecar Bundle (`scripts/build-sidecar-sebuf.mjs`)
+
 - Uses esbuild to compile `api/[domain]/v1/[rpc].ts` → `api/[domain]/v1/[rpc].js`
 - Single self-contained ESM bundle for the sidecar's `buildRouteTable()`
 - Tree-shaken, targeting Node 18+
@@ -593,6 +603,7 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 ## G) Integration Points
 
 ### Architecture Overview
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    FRONTEND (src/)                       │
@@ -643,12 +654,14 @@ world-monitor/                          # Root — Vite + Tauri + Vercel hybrid
 ### Communication Flows
 
 #### 1. Web (Vercel) Path
+
 ```
 Browser → middleware.ts (bot filter) → api/[domain]/v1/[rpc].ts (Edge Function)
   → validates origin (CORS) → validates API key → router.match() → handler → response
 ```
 
 #### 2. Desktop (Tauri) Path
+
 ```
 WebView → src/services/tauri-bridge.ts → Tauri IPC (invoke)
   → main.rs commands (secrets, cache, polymarket, settings, logs)
@@ -661,21 +674,25 @@ WebView → fetch("http://127.0.0.1:46123/api/...") → local-api-server.mjs
 ```
 
 #### 3. Proto → Code Pipeline
+
 ```
 *.proto (proto/) → buf generate → protoc-gen-ts-client → src/generated/client/
                                 → protoc-gen-ts-server → src/generated/server/
                                 → protoc-gen-openapiv3 → docs/api/
 ```
+
 - Client code provides typed RPC stubs used by `src/services/{domain}/index.ts`
 - Server code provides route descriptors + typed handler interfaces used by `server/worldmonitor/{domain}/v1/handler.ts`
 
 #### 4. Sidecar Sebuf Bundle
+
 ```
 api/[domain]/v1/[rpc].ts → esbuild (build-sidecar-sebuf.mjs) → [rpc].js (single ESM bundle)
   → loaded by local-api-server.mjs's buildRouteTable() at startup
 ```
 
 #### 5. Secret Management (Desktop)
+
 ```
 Tauri main.rs startup:
   → SecretsCache::load_from_keychain() (consolidated vault, single prompt)
@@ -686,6 +703,7 @@ Frontend settings window:
 ```
 
 #### 6. Persistent Cache (Desktop)
+
 ```
 Tauri main.rs:
   → PersistentCache::load(persistent-cache.json) at startup (in-memory)
